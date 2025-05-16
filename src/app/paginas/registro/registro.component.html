@@ -1,0 +1,50 @@
+<form [formGroup]="registroForm" (ngSubmit)="registrar()" novalidate="">
+ <div>
+   <label>Nombre: </label>
+   <input type="text" formControlName="nombre" />
+ </div>
+
+
+ <div>
+   <label>Teléfono: </label>
+   <input type="number" formControlName="telefono" />
+ </div>
+
+
+ <div>
+   <label>Ciudad: </label>
+   <input type="text" formControlName="ciudad" />
+ </div>
+
+
+ <div>
+   <label>Dirección: </label>
+   <input type="text" formControlName="direccion" />
+ </div>
+
+
+ <div>
+   <label>Email: </label>
+   <input type="email" formControlName="email" />
+ </div>
+
+
+ <div>
+   <label>Contraseña: </label>
+   <input type="password" formControlName="password" />
+ </div>
+
+
+ <div>
+  <label>Repetir contraseña: </label>
+  <input type="password" formControlName="confirmarPassword" />
+</div>
+
+
+@if (registroForm.hasError('passwordsMismatch')) {
+<p>Las contraseñas no coinciden</p>
+}
+
+
+ <button type="submit" [disabled]="registroForm.invalid">Registrarse</button>
+</form>
