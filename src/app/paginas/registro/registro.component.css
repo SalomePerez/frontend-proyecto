@@ -34,7 +34,7 @@
 }
 
 .input-redondeado {
-  height: 1.5rem; /* para que todos los campos tengan misma altura */
+  height: 2rem; /* para que todos los campos tengan misma altura */
 }
 
 .input-redondeado {
@@ -53,7 +53,7 @@
 
 /* Inputs redondeados */
 .input-redondeado {
-  border-radius: 0.75rem;
+  border-radius: 3rem;
 }
 
 /* Contenedor flex para centrar siempre el botón */

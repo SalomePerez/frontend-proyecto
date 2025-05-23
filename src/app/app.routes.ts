@@ -5,6 +5,7 @@ import { InicioComponent } from './paginas/inicio/inicio.component';
 import { RegistroComponent } from './paginas/registro/registro.component';
 import { ActivarCuentaComponent } from './paginas/activar-cuenta/activar-cuenta.component';
 import { RecuperarContraseniaComponent } from './paginas/recuperar-contrasenia/recuperar-contrasenia.component';
+import { ModificarContraseniaComponent } from './paginas/modificar-contrasenia/modificar-contrasenia.component';
 import { CambiarContraseniaComponent } from './paginas/cambiar-contrasenia/cambiar-contrasenia.component';
 
 // Home y vistas generales
@@ -52,6 +53,7 @@ export const routes: Routes = [
   { path: 'registro', component: RegistroComponent },
   { path: 'activar-cuenta', component: ActivarCuentaComponent },
   { path: 'recuperar-contrasenia', component: RecuperarContraseniaComponent },
+  { path: 'modificar-contrasenia', component: ModificarContraseniaComponent },
   { path: 'cambiar-contrasenia', component: CambiarContraseniaComponent },
   
   // Home y dashboards

@@ -188,7 +188,7 @@
   transform: translateX(-50%);
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 3px solid rgba(255, 255, 255, 0.2);
   border-radius: 20px;
   padding: 2rem;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
@@ -229,7 +229,7 @@
 
 .btn {
   padding: 0.875rem 2rem;
-  border-radius: 12px;
+  border-radius: 25px;
   font-size: 1rem;
   font-weight: 600;
   border: none;
