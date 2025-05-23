@@ -1,0 +1,459 @@
+.login-form {
+  width: 100%;
+  max-width: 380px;
+}
+
+.input-group-custom {
+  margin-bottom: 1.5rem;
+  text-align: left;
+}/* Estilos generales */
+* {
+  box-sizing: border-box;
+}
+
+.activar-cuenta-container {
+  display: flex;
+  min-height: 100vh;
+  background-color: #3F5AF5;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Sección izquierda - EXACTA A LA IMAGEN */
+.left-section {
+  flex: 0 0 40%;
+  background: linear-gradient(135deg, #3F5AF5 0%, #3F5AF5 100%);
+  padding: 3rem 2.5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  color: white;
+  position: relative;
+  overflow: hidden;
+  z-index: 1;
+}
+
+.left-section::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(253, 253, 253, 0.1) 1px, transparent 1px);
+  background-size: 30px 30px;
+  animation: float 20s ease-in-out infinite;
+  z-index: 0;
+}
+
+@keyframes float {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(20px, 20px); }
+}
+
+.brand-section {
+  margin-bottom: 3rem;
+}
+
+.logo-container {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.logo-icon {
+  width: 90px;
+  height: 90px;
+  object-fit: contain;
+  border-radius: 12px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0);
+  backdrop-filter: blur(10px);
+}
+
+.brand-name {
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin: 0;
+  text-shadow: 0 2px 10px rgba(255, 255, 255, 0.116);
+}
+
+.content-section {
+  position: relative;
+  z-index: 2;
+}
+
+.main-title {
+  font-size: 2.8rem;
+  font-weight: 800;
+  line-height: 1.2;
+  margin-bottom: 1.5rem;
+  text-shadow: 0 2px 10px rgba(255, 255, 255, 0.2);
+}
+
+.subtitle {
+  font-size: 1.3rem;
+  font-weight: 600;
+  margin-bottom: 2rem;
+  opacity: 0.95;
+}
+
+.description-section {
+  margin-top: 2.5rem;
+}
+
+.description {
+  font-size: 1.1rem;
+  line-height: 1.6;
+  opacity: 0.9;
+  font-weight: 400;
+}
+
+/* Sección derecha - EXACTA A LA IMAGEN */
+.right-panel {
+  flex: 1;
+  background: #d5d9ff;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 3rem 2rem;
+  color: #111827;
+  text-align: center;
+}
+
+.form-title {
+  font-size: 3.5rem;
+  font-weight: 800;
+  margin-bottom: 0.5rem;
+  color: #111827;
+}
+
+.form-subtitle {
+  font-size: 1.2rem;
+  color: #6b7280;
+  margin-bottom: 2.5rem;
+  font-weight: 500;
+}
+
+/* Todos los elementos con bordes completamente redondos */
+.input {
+  width: 100%;
+  padding: 0.875rem 1.25rem;
+  font-size: 1rem;
+  border: none;
+  border-radius: 2rem; /* Completamente redondo */
+  background-color: #ffffff;
+  color: #374151;
+  transition: all 0.3s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.input:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+  background-color: #ffffff;
+}
+
+.input::placeholder {
+  color: #9ca3af;
+  font-size: 0.95rem;
+}
+
+.input-error {
+  border: 2px solid #dc2626;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+}
+
+/* Botones - TODOS CON BORDES REDONDOS */
+.btn {
+  width: 100%;
+  max-width: 380px;
+  padding: 0.875rem 1.5rem;
+  font-weight: 700;
+  border-radius: 2rem; /* Completamente redondo */
+  cursor: pointer;
+  border: none;
+  transition: all 0.3s ease;
+  margin-bottom: 1.5rem;
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+/* Mensajes de alerta con bordes redondos */
+.alert-message {
+  width: 100%;
+  max-width: 380px;
+  padding: 0.875rem 1.25rem;
+  border-radius: 2rem; /* Completamente redondo */
+  margin-bottom: 1.5rem;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Campo de contraseña - CON TEXTO DESCRIPTIVO */
+.password-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-input {
+  padding-right: 9rem; /* Más espacio para el texto */
+}
+
+.password-toggle-btn {
+  position: absolute;
+  right: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #6b7280;
+  cursor: pointer;
+  padding: 0.5rem 0.75rem;
+  border-radius: 1.5rem; /* Bordes completamente redondos */
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.password-toggle-btn:hover {
+  color: #374151;
+  background-color: rgba(156, 163, 175, 0.1);
+}
+
+.password-toggle-btn:focus {
+  outline: none;
+  color: #374151;
+  background-color: rgba(156, 163, 175, 0.15);
+}
+
+.password-toggle-text {
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+/* Enlace de contraseña olvidada - EXACTO A LA IMAGEN */
+.forgot-password-container {
+  text-align: right;
+  margin-bottom: 2rem;
+}
+
+.forgot-password-link {
+  color: #6b7280;
+  font-size: 0.9rem;
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+.forgot-password-link:hover {
+  color: #374151;
+}
+
+/* Botones - EXACTO A LA IMAGEN */
+.btn {
+  width: 100%;
+  max-width: 380px;
+  padding: 0.875rem 1.5rem;
+  font-weight: 700;
+  border-radius: 2rem;
+  cursor: pointer;
+  border: none;
+  transition: all 0.3s ease;
+  margin-bottom: 1.5rem;
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.primary-btn {
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  color: white;
+  box-shadow: 0 4px 14px rgba(79, 70, 229, 0.3);
+}
+
+.primary-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(79, 70, 229, 0.4);
+}
+
+.primary-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Sección de registro - EXACTO A LA IMAGEN */
+.register-section {
+  margin-top: 1rem;
+}
+
+.register-text {
+  color: #6b7280;
+  font-size: 0.95rem;
+  margin: 0;
+}
+
+.register-link {
+  color: #111827;
+  font-weight: 700;
+  text-decoration: underline;
+  transition: color 0.3s ease;
+}
+
+.register-link:hover {
+  color: #4f46e5;
+}
+
+/* Mensajes de error */
+.error-message {
+  color: #dc2626;
+  font-size: 0.85rem;
+  margin-top: 0.5rem;
+  text-align: left;
+}
+
+.alert-message {
+  width: 100%;
+  max-width: 380px;
+  padding: 0.875rem 1.25rem;
+  border-radius: 1rem;
+  margin-bottom: 1.5rem;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.error-alert {
+  background-color: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+}
+
+.loading-alert {
+  background-color: #eff6ff;
+  color: #2563eb;
+  border: 1px solid #bfdbfe;
+}
+
+.loading-content {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/* Spinners */
+.spinner {
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid #bfdbfe;
+  border-top: 2px solid #2563eb;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.spinner-small {
+  width: 0.875rem;
+  height: 0.875rem;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top: 2px solid white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  display: inline-block;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Responsivo - EXACTO A LA IMAGEN */
+@media (max-width: 991.98px) {
+  .activar-cuenta-container {
+    flex-direction: column;
+  }
+  
+  .left-section {
+    flex: none;
+    min-height: 40vh;
+    padding: 2rem 1.5rem;
+  }
+  
+  .brand-name {
+    font-size: 2rem;
+  }
+  
+  .main-title {
+    font-size: 2.2rem;
+  }
+  
+  .subtitle {
+    font-size: 1.1rem;
+  }
+  
+  .description {
+    font-size: 0.95rem;
+  }
+  
+  .form-title {
+    font-size: 2.5rem;
+  }
+  
+  .right-panel {
+    padding: 2rem 1.5rem;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .right-panel {
+    padding: 1.5rem 1rem;
+  }
+  
+  .logo-container {
+    flex-direction: column;
+    text-align: center;
+    gap: 0.5rem;
+  }
+  
+  .logo-icon {
+    width: 70px;
+    height: 70px;
+    margin-bottom: 0.5rem;
+  }
+  
+  .brand-name {
+    font-size: 1.8rem;
+  }
+  
+  .main-title {
+    font-size: 2rem;
+  }
+  
+  .form-title {
+    font-size: 2rem;
+  }
+  
+  .login-form,
+  .btn,
+  .alert-message {
+    max-width: 100%;
+  }
+}
+
+/* Iconos de Bootstrap */
+.bi {
+  font-size: inherit;
+}

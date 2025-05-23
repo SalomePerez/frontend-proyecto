@@ -30,6 +30,7 @@ import { PerfilClienteComponent } from './paginas/perfil-cliente/perfil-cliente.
 import { EditarPerfilUsuarioComponent } from './paginas/editar-perfil-usuario/editar-perfil-usuario.component';
 import { EliminarCuentaComponent } from './paginas/eliminar-cuenta/eliminar-cuenta.component';
 import { EliminarAdministradorComponent } from './paginas/eliminar-administrador/eliminar-administrador.component';
+import { InicioSesionComponent } from './paginas/inicio-sesion/inicio-sesion.component';
 
 // Informes y filtros
 import { GenerarInformesComponent } from './paginas/generar-informes/generar-informes.component';
@@ -42,14 +43,23 @@ import { FiltrarPorUbicacionComponent } from './paginas/filtrar-por-ubicacion/fi
 import { CategoriasComponent } from './paginas/categorias/categorias.component';
 
 export const routes: Routes = [
-  { path: '', component: InicioComponent },
+  // Redirigir la raíz al login
+  { path: '', redirectTo: '/login', pathMatch: 'full' },
+  
+  // Autenticación
+  { path: 'login', component: InicioSesionComponent },
+  { path: 'inicio', component: InicioComponent },
   { path: 'registro', component: RegistroComponent },
   { path: 'activar-cuenta', component: ActivarCuentaComponent },
   { path: 'recuperar-contrasenia', component: RecuperarContraseniaComponent },
   { path: 'cambiar-contrasenia', component: CambiarContraseniaComponent },
+  
+  // Home y dashboards
   { path: 'home', component: HomeComponent },
   { path: 'inicio-admin', component: InicioAdminComponent },
   { path: 'inicio-cliente', component: InicioClienteComponent },
+  
+  // Reportes
   { path: 'crear-reporte', component: CrearReporteComponent },
   { path: 'editar-reporte', component: EditarReporteComponent },
   { path: 'detalle-reporte', component: DetalleReporteComponent },
@@ -60,17 +70,30 @@ export const routes: Routes = [
   { path: 'verificar-reporte', component: VerificarReporteComponent },
   { path: 'rechazar-reporte', component: RechazarReporteComponent },
   { path: 'revision-reporte', component: RevisionReporteComponent },
+  
+  // Perfiles de usuario
   { path: 'perfil-administrador', component: PerfilAdministradorComponent },
   { path: 'perfil-cliente', component: PerfilClienteComponent },
   { path: 'editar-perfil-usuario', component: EditarPerfilUsuarioComponent },
   { path: 'eliminar-cuenta', component: EliminarCuentaComponent },
   { path: 'eliminar-administrador', component: EliminarAdministradorComponent },
+  
+  // Informes y filtros
   { path: 'generar-informes', component: GenerarInformesComponent },
   { path: 'informes-por-categoria', component: InformesPorCategoriaComponent },
   { path: 'informes-por-zona', component: InformesPorZonaComponent },
   { path: 'filtrar-por-prioridad', component: FiltrarPorPrioridadComponent },
   { path: 'filtrar-por-ubicacion', component: FiltrarPorUbicacionComponent },
+  
+  // Categorías
   { path: 'categorias', component: CategoriasComponent },
-  { path: 'registro-exitoso', loadComponent: () => import('./paginas/registro-exitoso/registro-exitoso.component').then(m => m.RegistroExitosoComponent) },
-  { path: '**', pathMatch: 'full', redirectTo: '' }
+  
+  // Páginas especiales
+  { 
+    path: 'registro-exitoso', 
+    loadComponent: () => import('./paginas/registro-exitoso/registro-exitoso.component').then(m => m.RegistroExitosoComponent) 
+  },
+  
+  // Wildcard route - debe ir al final
+  { path: '**', redirectTo: '/login' }
 ];

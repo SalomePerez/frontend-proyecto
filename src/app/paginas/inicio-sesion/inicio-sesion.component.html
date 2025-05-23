@@ -1,0 +1,115 @@
+<div class="activar-cuenta-container">
+  <!-- Sección izquierda - Información de la app -->
+  <section class="left-section" aria-label="Información de la aplicación">
+    <div class="brand-section">
+      <div class="logo-container">
+        <img 
+          src="assets/logo.png" 
+          alt="Logo de SegurApp" 
+          class="logo-icon" />
+        <h1 class="brand-name">SegurApp</h1>
+      </div>
+    </div>
+
+    <div class="content-section">
+      <h2 class="main-title">Protege tu comunidad con SegurApp</h2>
+      <p class="subtitle">
+        ¡Reporta, colabora y haz la diferencia en tu ciudad!
+      </p>
+
+      <div class="description-section">
+        <p class="description">
+          Conéctate con tu comunidad y mejora la seguridad. Reporta incidentes, recibe 
+          alertas y colabora por un entorno más seguro. ¡Actúa con SegurApp!
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Sección derecha - Formulario de login -->
+  <div class="right-panel">
+    <h2 class="form-title">¡Bienvenido!</h2>
+    <p class="form-subtitle">Inicia Sesión</p>
+
+    <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="login-form">
+      
+      <!-- Campo de Correo Electrónico -->
+      <div class="input-group-custom">
+        <input 
+          type="email" 
+          class="input"
+          formControlName="email"
+          placeholder="Ingresa tu correo electrónico"
+          [class.input-error]="loginForm.get('email')?.invalid && loginForm.get('email')?.touched">
+        <div class="error-message" *ngIf="loginForm.get('email')?.invalid && loginForm.get('email')?.touched">
+          <span *ngIf="loginForm.get('email')?.errors?.['required']">El correo electrónico es requerido</span>
+          <span *ngIf="loginForm.get('email')?.errors?.['email']">Ingresa un correo electrónico válido</span>
+        </div>
+      </div>
+
+      <!-- Campo de Contraseña -->
+      <div class="input-group-custom">
+        <div class="password-container">
+          <input 
+            [type]="showPassword ? 'text' : 'password'" 
+            class="input password-input"
+            formControlName="password"
+            placeholder="Ingresa tu contraseña"
+            [class.input-error]="loginForm.get('password')?.invalid && loginForm.get('password')?.touched">
+          <button 
+            type="button" 
+            class="password-toggle-btn"
+            (click)="togglePassword()"
+            [title]="showPassword ? 'Ocultar contraseña' : 'Ver contraseña'">
+            <span class="password-toggle-text">{{ showPassword ? 'Ocultar contraseña' : 'Ver contraseña' }}</span>
+          </button>
+        </div>
+        <div class="error-message" *ngIf="loginForm.get('password')?.invalid && loginForm.get('password')?.touched">
+          <span *ngIf="loginForm.get('password')?.errors?.['required']">La contraseña es requerida</span>
+          <span *ngIf="loginForm.get('password')?.errors?.['minlength']">La contraseña debe tener al menos 6 caracteres</span>
+        </div>
+      </div>
+
+      <!-- Enlace de recuperar contraseña -->
+      <div class="forgot-password-container">
+        <a href="#" class="forgot-password-link" (click)="onForgotPassword($event)">
+          ¿Has olvidado la contraseña?
+        </a>
+      </div>
+
+      <!-- Mensaje de error general -->
+      <div class="alert-message error-alert" *ngIf="errorMessage">
+        <i class="bi bi-exclamation-triangle"></i>
+        {{ errorMessage }}
+      </div>
+
+      <!-- Mensaje de carga -->
+      <div class="alert-message loading-alert" *ngIf="isLoading">
+        <div class="loading-content">
+          <div class="spinner"></div>
+          Iniciando sesión...
+        </div>
+      </div>
+
+      <!-- Botón de Iniciar Sesión -->
+      <button 
+        type="submit" 
+        class="btn primary-btn login-btn-main"
+        [disabled]="loginForm.invalid || isLoading">
+        <span *ngIf="!isLoading">Iniciar Sesión</span>
+        <span *ngIf="isLoading">
+          <span class="spinner-small"></span>
+          Iniciando...
+        </span>
+      </button>
+
+      <!-- Enlace de registro -->
+      <div class="register-section">
+        <p class="register-text">
+          ¿No tienes una cuenta? 
+          <a routerLink="/registro" class="register-link">Regístrate</a>
+        </p>
+      </div>
+    </form>
+  </div>
+</div>

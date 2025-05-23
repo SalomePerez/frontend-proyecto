@@ -1,6 +1,7 @@
 .activar-cuenta-container {
   display: flex;
   min-height: 100vh;
+  background-color: #3F5AF5;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
