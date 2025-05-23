@@ -1,50 +1,67 @@
-<form [formGroup]="registroForm" (ngSubmit)="registrar()" novalidate="">
- <div>
-   <label>Nombre: </label>
-   <input type="text" formControlName="nombre" />
- </div>
+<div class="d-flex flex-column align-items-center min-vh-100 fondo-registro">
+  <!-- Título fuera de la tarjeta -->
+  <h2 class="fw-bold titulo-exterior mt-5">Regístrate</h2>
 
+  <!-- Tarjeta azul clarito -->
+  <div class="formulario-registro p-4 my-3 w-100" style="max-width: 800px;">
+    <form [formGroup]="registroForm" (ngSubmit)="registrar()" novalidate>
 
- <div>
-   <label>Teléfono: </label>
-   <input type="number" formControlName="telefono" />
- </div>
+      <form [formGroup]="registroForm" (ngSubmit)="registrar()" novalidate>
+  <div class="form-grid">
+    
+    <!-- Grupo 1: Nombre -->
+    <div class="form-group">
+      <label for="nombre">Nombre</label>
+      <input id="nombre" type="text" formControlName="nombre" class="form-control input-redondeado" />
+    </div>
 
+    <!-- Grupo 2: Email -->
+    <div class="form-group">
+      <label for="email">Email</label>
+      <input id="email" type="email" formControlName="email" class="form-control input-redondeado" />
+    </div>
 
- <div>
-   <label>Ciudad: </label>
-   <input type="text" formControlName="ciudad" />
- </div>
+    <!-- Grupo 3: Teléfono -->
+    <div class="form-group">
+      <label for="telefono">Teléfono</label>
+      <input id="telefono" type="text" formControlName="telefono" class="form-control input-redondeado" />
+    </div>
 
+    <!-- Grupo 4: Contraseña -->
+    <div class="form-group">
+      <label for="password">Contraseña</label>
+      <input id="password" type="password" formControlName="password" class="form-control input-redondeado" />
+    </div>
 
- <div>
-   <label>Dirección: </label>
-   <input type="text" formControlName="direccion" />
- </div>
+    <!-- Grupo 5: Ciudad -->
+    <div class="form-group">
+      <label for="ciudad">Ciudad</label>
+      <input id="ciudad" type="text" formControlName="ciudad" class="form-control input-redondeado" />
+    </div>
 
+    <!-- Grupo 6: Confirmar contraseña -->
+    <div class="form-group">
+      <label for="confirmarPassword">Confirmar contraseña</label>
+      <input id="confirmarPassword" type="password" formControlName="confirmarPassword" class="form-control input-redondeado" />
+    </div>
 
- <div>
-   <label>Email: </label>
-   <input type="email" formControlName="email" />
- </div>
+    <!-- Grupo 7: Dirección (si lo necesitas como octavo) -->
+    <div class="form-group">
+      <label for="direccion">Dirección</label>
+      <input id="direccion" type="text" formControlName="direccion" class="form-control input-redondeado" />
+    </div>
 
+  </div>
 
- <div>
-   <label>Contraseña: </label>
-   <input type="password" formControlName="password" />
- </div>
+  <!-- Mensaje de error -->
+  <div *ngIf="registroForm.hasError('passwordsMismatch')" class="alert alert-danger text-center my-3">
+    Las contraseñas no coinciden
+  </div>
 
-
- <div>
-  <label>Repetir contraseña: </label>
-  <input type="password" formControlName="confirmarPassword" />
-</div>
-
-
-@if (registroForm.hasError('passwordsMismatch')) {
-<p>Las contraseñas no coinciden</p>
-}
-
-
- <button type="submit" [disabled]="registroForm.invalid">Registrarse</button>
+  <!-- Botón centrado -->
+  <div class="boton-container">
+    <button class="btn btn-primary boton-registro" type="submit" [disabled]="registroForm.invalid">
+      <i class="fa-solid fa-check me-2"></i>Registrarme
+    </button>
+  </div>
 </form>

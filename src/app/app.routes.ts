@@ -24,6 +24,8 @@ import { NotificacionesComponent } from './paginas/notificaciones/notificaciones
 import { VerificarReporteComponent } from './paginas/verificar-reporte/verificar-reporte.component';
 import { RechazarReporteComponent } from './paginas/rechazar-reporte/rechazar-reporte.component';
 import { RevisionReporteComponent } from './paginas/revision-reporte/revision-reporte.component';
+import { GestionReportesComponent } from './paginas/gestion-reportes/gestion-reportes.component';
+
 
 // Usuario
 import { PerfilAdministradorComponent } from './paginas/perfil-administrador/perfil-administrador.component';
@@ -73,5 +75,6 @@ export const routes: Routes = [
   { path: 'filtrar-por-prioridad', component: FiltrarPorPrioridadComponent },
   { path: 'filtrar-por-ubicacion', component: FiltrarPorUbicacionComponent },
   { path: 'categorias', component: CategoriasComponent },
+  { path: "gestion-reportes", component: GestionReportesComponent },
   { path: '**', pathMatch: 'full', redirectTo: '' }
 ];

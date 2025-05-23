@@ -1,0 +1,73 @@
+/* Fondo azul oscuro */
+.fondo-registro {
+  background-color: #3F5AF5;
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Contenedor grid: 2 columnas iguales, con gap uniforme */
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr); /* dos columnas iguales */
+  gap: 1.5rem;                            /* espacio entre filas y columnas */
+}
+
+/* Cada grupo (label + input) ocupa su celda */
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Título fuera de la tarjeta */
+.titulo-exterior {
+  color: rgb(0, 0, 0);
+  font-size: 2.25rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.mb-3 {
+  margin-bottom: 1rem !important;
+}
+
+.input-redondeado {
+  height: 1.5rem; /* para que todos los campos tengan misma altura */
+}
+
+.input-redondeado {
+  border-radius: 0.75rem;
+}
+
+/* Tarjeta azul clarito (35% opacidad) */
+.formulario-registro {
+  background-color: rgba(155, 188, 255, 0.84);
+  border-radius: 2rem;
+  box-shadow: 0 4px 20px rgba(4, 250, 90, 0.2);
+  width: 100%;
+  max-width: 750px;
+  padding: 2rem;
+}
+
+/* Inputs redondeados */
+.input-redondeado {
+  border-radius: 0.75rem;
+}
+
+/* Contenedor flex para centrar siempre el botón */
+.boton-container {
+  display: flex;
+  justify-content: center;
+  margin-top: 2rem; /* ajusta la distancia vertical */
+}
+
+/* Asegúrate de que el botón no se expanda al 100% */
+.boton-registro {
+  width: auto;         /* ancho automático según contenido */
+  padding: 0.75rem 2rem;
+  border-radius: 0.75rem;
+  border: none;
+  font-weight: 600;
+}

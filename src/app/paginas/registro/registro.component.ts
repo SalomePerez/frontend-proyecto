@@ -33,6 +33,10 @@ public passwordsMatchValidator(formGroup: FormGroup) {
  return password == confirmarPassword ? null : { passwordsMismatch: true };
 }
 
+mostrarPassword = false;
+mostrarConfirmPassword = false;
+
+
 
 private crearFormulario() {
  this.registroForm = this.formBuilder.group({     

@@ -1,1 +1,72 @@
-/* You can add global styles to this file, and also import other style files */
+html, body {
+  height: 100%;
+}
+
+.fondo-registro {
+  background-color: #3F5AF5;
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.input-redondeado {
+  border-radius: 0.75rem;
+}
+
+.titulo-registro {
+  font-weight: bold;
+  font-size: 2rem;
+  color: rgb(0, 0, 0);
+}
+
+.titulo-registro {
+  font-weight: bold;
+  font-size: 2rem;
+  color: rgb(0, 0, 0);
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+.formulario-registro {
+  background-color: rgba(63, 90, 245, 0.35);
+  border-radius: 2rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  width: 100%;
+  max-width: 750px;
+  color: rgb(0, 0, 0);
+}
+
+
+.form-control.ng-invalid.ng-dirty {
+   border-color: var(--bs-form-invalid-border-color);
+   padding-right: calc(1.5em + 0.75rem);
+   background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' width='12' height='12' fill='none' stroke='%23dc3545'%3e%3ccircle cx='6' cy='6' r='4.5'/%3e%3cpath stroke-linejoin='round' d='M5.8 3.6h.4L6 6.5z'/%3e%3ccircle cx='6' cy='8.2' r='.6' fill='%23dc3545' stroke='none'/%3e%3c/svg%3e");
+   background-repeat: no-repeat;
+   background-position: right calc(0.375em + 0.1875rem) center;
+   background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
+}
+
+
+.form-control.ng-valid.ng-dirty {
+   border-color: var(--bs-form-valid-border-color);
+   padding-right: calc(1.5em + 0.75rem);
+   background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3e%3cpath fill='%23198754' d='M2.3 6.73.6 4.53c-.4-1.04.46-1.4 1.1-.8l1.1 1.4 3.4-3.8c.6-.63 1.6-.27 1.2.7l-4 4.6c-.43.5-.8.4-1.1.1z'/%3e%3c/svg%3e");
+   background-repeat: no-repeat;
+   background-position: right calc(0.375em + 0.1875rem) center;
+   background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
+}
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
+
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: hsl(216, 100%, 57%); /* azul oscuro de fondo */
+  margin: 0;
+  padding: 0;
+}
+
+
+
+

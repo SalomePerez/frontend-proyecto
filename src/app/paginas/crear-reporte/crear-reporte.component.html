@@ -9,15 +9,18 @@
     <textarea formControlName="descripcion"></textarea>
   </div>
 
-  <div>
-    <label>Categoría: </label>
-    <select formControlName="categoria">
-        <option value="" disabled selected>Seleccione una categoría</option>
-        @for (item of categorias; track $index) {
-        <option value="{{item}}">{{item}}</option>
-        }
-    </select>
-  </div>
+
+<div class="col-12 col-sm-6">
+   <label class="form-label">Categoría: </label>
+   <select class="form-select" formControlName="categoria">
+       <option value="">Seleccione una categoría</option>
+       @for (item of categorias; track $index) {
+           <option value="{{item}}">{{item}}</option>
+       }
+   </select>
+</div>
+
+
 
 <div>
   <label>Ciudad: </label>
@@ -38,6 +41,7 @@
   <label>Imagen reporte: </label>
   <input type="file" (change)="onFileChange($event)" multiple />
 </div>
+
 
   <button type="submit" [disabled]="crearReporteForm.invalid">Crear reporte</button>
 </form>
