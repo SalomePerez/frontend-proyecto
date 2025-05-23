@@ -2,7 +2,6 @@ import { Routes } from '@angular/router';
 
 // Páginas de autenticación y registro
 import { InicioComponent } from './paginas/inicio/inicio.component';
-import { LoginComponent } from './paginas/login/login.component';
 import { RegistroComponent } from './paginas/registro/registro.component';
 import { ActivarCuentaComponent } from './paginas/activar-cuenta/activar-cuenta.component';
 import { RecuperarContraseniaComponent } from './paginas/recuperar-contrasenia/recuperar-contrasenia.component';
@@ -24,8 +23,6 @@ import { NotificacionesComponent } from './paginas/notificaciones/notificaciones
 import { VerificarReporteComponent } from './paginas/verificar-reporte/verificar-reporte.component';
 import { RechazarReporteComponent } from './paginas/rechazar-reporte/rechazar-reporte.component';
 import { RevisionReporteComponent } from './paginas/revision-reporte/revision-reporte.component';
-import { GestionReportesComponent } from './paginas/gestion-reportes/gestion-reportes.component';
-
 
 // Usuario
 import { PerfilAdministradorComponent } from './paginas/perfil-administrador/perfil-administrador.component';
@@ -46,7 +43,6 @@ import { CategoriasComponent } from './paginas/categorias/categorias.component';
 
 export const routes: Routes = [
   { path: '', component: InicioComponent },
-  { path: 'login', component: LoginComponent },
   { path: 'registro', component: RegistroComponent },
   { path: 'activar-cuenta', component: ActivarCuentaComponent },
   { path: 'recuperar-contrasenia', component: RecuperarContraseniaComponent },
@@ -75,6 +71,6 @@ export const routes: Routes = [
   { path: 'filtrar-por-prioridad', component: FiltrarPorPrioridadComponent },
   { path: 'filtrar-por-ubicacion', component: FiltrarPorUbicacionComponent },
   { path: 'categorias', component: CategoriasComponent },
-  { path: "gestion-reportes", component: GestionReportesComponent },
+  { path: 'registro-exitoso', loadComponent: () => import('./paginas/registro-exitoso/registro-exitoso.component').then(m => m.RegistroExitosoComponent) },
   { path: '**', pathMatch: 'full', redirectTo: '' }
 ];

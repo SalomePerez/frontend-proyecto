@@ -1,5 +1,4 @@
-<div class="activar-cuenta-container">
-
+<div class="registro-container d-flex flex-row">
   <!-- Sección izquierda - Información de la app -->
   <section class="left-section" aria-label="Información de la aplicación">
     <div class="brand-section">
@@ -27,28 +26,18 @@
     </div>
   </section>
 
-  <!-- Sección derecha (formulario) -->
-  <div class="right-panel">
-    <h2 class="form-title">Activar Cuenta</h2>
+  <!-- Lado derecho -->
+  <div class="right-panel d-flex flex-column justify-content-center align-items-center text-center px-4">
+    <h1 class="fw-bold mb-3">¡Registro Exitoso!</h1>
 
-    <form>
+    <i class="fa fa-check-circle check-icon mb-4" aria-hidden="true"></i>
 
-      <!-- Grupo de correo y botón en fila -->
-      <div class="input-button-group">
-        <input id="email" type="email" class="input" placeholder="Correo electrónico" />
-
-        <button type="button" class="btn primary-btn">Enviar código</button>
-      </div>
-
-        <input type="text" class="input codigo-separado" placeholder="Escribe tu código" />
-
-      <button type="button" class="btn primary-btn">Verificar</button>
-    </form>
-
-    <p class="info-text">
+    <p class="mb-4 px-5">
       Tu cuenta ha sido creada con éxito. Ahora puedes iniciar sesión y comenzar a reportar incidentes en tu comunidad.
     </p>
 
-    <button type="button" class="btn secondary-btn">Iniciar Sesión</button>
+    <button class="btn btn-primary rounded-pill px-4 py-2 fw-semibold" (click)="irALogin()">
+      Activar cuenta
+    </button>
   </div>
 </div>

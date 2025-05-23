@@ -1,9 +1,54 @@
+/* Reset y estilos base */
 html, body {
   height: 100%;
+  margin: 0;
+  padding: 0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #f8f9fa;
 }
 
+* {
+  box-sizing: border-box;
+}
+
+/* Estilos para elementos de formulario */
+.form-control {
+  display: block;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  font-size: 1rem;
+  font-weight: 400;
+  line-height: 1.5;
+  color: #495057;
+  background-color: #fff;
+  background-clip: padding-box;
+  border: 1px solid #ced4da;
+  border-radius: 0.375rem;
+  transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.form-control:focus {
+  color: #495057;
+  background-color: #fff;
+  border-color: #27588c;
+  outline: 0;
+  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.form-control.is-invalid {
+  border-color: #dc3545;
+}
+
+
+
+
+
 .fondo-registro {
-  background-color: #3F5AF5;
+  background-color: #0c1f8b;
   width: 100%;
   min-height: 100vh;
   display: flex;
@@ -60,12 +105,7 @@ html, body {
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
 
-body {
-  font-family: 'Inter', sans-serif;
-  background-color: hsl(216, 100%, 57%); /* azul oscuro de fondo */
-  margin: 0;
-  padding: 0;
-}
+
 
 
 

@@ -1,27 +1,71 @@
-<div class="contenedor">
-  <div class="lado-izquierdo">
-    <div class="logo">
-      <img src="assets/logo.png" alt="Logo SegurApp" />
-      <h1>SegurApp</h1>
-    </div>
-    <p class="descripcion-principal">
-      Protege tu comunidad con SegurApp<br />
-      ¡Reporta, colabora y haz la diferencia en tu ciudad!
-    </p>
-    <p class="descripcion-secundaria">
-      Conéctate con tu comunidad y mejora la seguridad. Reporta incidentes,
-      recibe alertas y colabora por un entorno más seguro. ¡Actúa con SegurApp!
-    </p>
-  </div>
-
-  <div class="lado-derecho">
-    <div class="fondo-mapa">
-      <div class="bienvenida-titulo">Bienvenido</div>
-      <div class="cuadro-login">
-        <h2>Accede a tu cuenta</h2>
-        <button class="btn" routerLink="/registro">Regístrate</button>
-        <button class="btn" routerLink="/login">Inicia sesión</button>
+<!-- home.component.html -->
+<div class="home-container">
+  
+  <!-- Sección izquierda - Información de la app -->
+  <section class="left-section" aria-label="Información de la aplicación">
+    <div class="brand-section">
+      <div class="logo-container">
+        <img 
+          src="assets/logo.png" 
+          alt="Logo de SegurApp" 
+          class="logo-icon"
+          (error)="onImageError($event)"
+          (load)="onImageLoad($event)" />
+        <h1 class="brand-name">SegurApp</h1>
       </div>
     </div>
-  </div>
+
+    <div class="content-section">
+      <h2 class="main-title">Protege tu comunidad con SegurApp</h2>
+      <p class="subtitle">
+        ¡Reporta, colabora y haz la diferencia en tu ciudad!
+      </p>
+
+      <div class="description-section">
+        <p class="description">
+          Conéctate con tu comunidad y mejora la seguridad. Reporta incidentes, recibe 
+          alertas y colabora por un entorno más seguro. ¡Actúa con SegurApp!
+        </p>
+      </div>
+    </div>
+  </section>
+  
+  <!-- Sección derecha - Mapa y formulario -->
+  <section class="right-section" aria-label="Mapa interactivo y acceso">
+    <div class="map-container">
+      <img 
+        src="assets/mapa.png" 
+        alt="Mapa de la ciudad" 
+        class="map-image"
+        (error)="onImageError($event)"
+        (load)="onImageLoad($event)" />
+
+      <h3 class="welcome-title">Bienvenido</h3>
+      
+      <!-- Marcador de ubicación -->
+      <div class="location-marker" aria-hidden="true">
+        <div class="marker-pin"></div>
+      </div>
+
+      <!-- Tarjeta de acceso -->
+      <div class="welcome-card" role="region" aria-label="Acceso de usuario">
+        <div class="access-section">
+          <h4 class="access-title">Accede a tu cuenta</h4>
+          
+          <div class="button-group">
+            <button type="button" class="btn btn-register" (click)="navigateToRegister()">Regístrate</button>
+            <button type="button" class="btn btn-login" (click)="navigateToLogin()">Inicia sesión</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Botón flotante de acción rápida -->
+      <button 
+        class="floating-action-btn" 
+        aria-label="Acciones rápidas" 
+        (click)="showQuickActions()">
+        <i class="fas fa-plus" aria-hidden="true"></i>
+      </button>
+    </div>
+  </section>
 </div>

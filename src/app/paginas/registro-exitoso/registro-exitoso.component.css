@@ -1,7 +1,8 @@
-.activar-cuenta-container {
-  display: flex;
-  min-height: 100vh;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+/* Contenedor general de toda la vista */
+.registro-container {
+  height: 100vh;
+  background-color: #3F5AF5;
+  overflow: hidden;
 }
 
 /* Sección izquierda */
@@ -101,87 +102,58 @@
   opacity: 0.9;
   font-weight: 400;
 }
+  
 
-/* Sección derecha */
+/* Panel derecho (texto, ícono y botón) */
 .right-panel {
-  flex: 1;
-  background: #d5d9ff;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  padding: 3rem 2rem;
-  color: #111827;
-  text-align: center;
+  width: 60%;
+  background-color: rgba(211, 226, 255, 0.918);
+  padding: 2rem;
 }
 
-.form-title {
-  font-size: 3rem;
-  font-weight: 750;
-  margin-bottom: 3rem;
-  
+/* Logo */
+.logo {
+  width: 100px;
+  height: auto;
 }
 
-label {
-  display: block;
-  text-align: left;
-  font-weight: bold;
-  margin-bottom: 0.5rem;
-  width: 100%;
-  max-width: 300px;
+/* Ícono de check grande y verde */
+.check-icon {
+  font-size: 6rem;
+  color: #2ecc71;
 }
 
-.input {
-  width: 100%;
-  max-width: 300px;
-  padding: 0.75rem;
-  border-radius: 1.5rem;
-  border: none;
-  margin-bottom: 1.5rem;
-  font-size: 1rem;
-  
+h1 {
+  font-size: 2.5rem;
+  color: #000;
 }
-
-.btn {
-  width: 100%;
-  max-width: 300px;
-  padding: 0.75rem;
-  font-weight: bold;
-  border-radius: 1.5rem;
-  cursor: pointer;
-  border: none;
-  transition: background 0.3s ease;
-  margin-bottom: 1rem;
-  
-}
-
-.primary-btn {
-  background: #8da3ff;
-  color: #111827;
-}
-
-.primary-btn:hover {
-  background: #728eff;
-}
-
-.secondary-btn {
-  background: #b5c3ff;
+/* Solo el título "SegurApp" en la izquierda */
+.left-section .brand-name {
+  font-size: 2.5rem;
   color: white;
 }
 
-.codigo-separado {
-  margin-top: 2.5rem; /* aumenta el espacio vertical */
+/* Títulos generales tipo h1 en otras secciones */
+h1 {
+  font-size: 2.5rem;
+  color: #000; /* solo se aplicará si no hay clase específica */
 }
 
 
-.secondary-btn:hover {
-  background: #a3b2ff;
+h4 {
+  font-size: 1.25rem;
+  line-height: 1.5;
 }
 
-.info-text {
-  max-width: 320px;
-  margin-top: 1rem;
-  font-size: 0.95rem;
-  line-height: 1.4;
-  color: #374151;
+p {
+  font-size: 1rem;
+  color: #f0f0f0;
+}
+
+.right-panel p {
+  color: #2c2c2c;
+}
+
+button {
+  font-size: 1rem;
 }
