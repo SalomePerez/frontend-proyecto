@@ -2,8 +2,9 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 
-// Interfaces
+// Interface del reporte
 interface Reporte {
   id: number;
   titulo: string;
@@ -20,16 +21,17 @@ interface Reporte {
   };
   imagenes?: string[];
   comentariosAdmin?: string;
+  esPropio: boolean;
 }
 
 @Component({
-  selector: 'app-mis-reportes',
+  selector: 'app-reportes-propios',
   standalone: true,
   imports: [CommonModule],
-  templateUrl: './mis-reportes.component.html',
-  styleUrls: ['./mis-reportes.component.css']
+  templateUrl: './reportes-propios.component.html',
+  styleUrls: ['./reportes-propios.component.css']
 })
-export class MisReportesComponent implements OnInit, OnDestroy {
+export class ReportesPropiosComponent implements OnInit, OnDestroy {
   
   // Datos del usuario
   userName: string = 'Cliente SegurApp';
@@ -40,12 +42,9 @@ export class MisReportesComponent implements OnInit, OnDestroy {
   selectedCategory: string = 'todas';
   searchTerm: string = '';
   
-  
   // Datos de reportes
-  reportes: Reporte[] = [];
+  reportesPropios: Reporte[] = [];
   reportesFiltrados: Reporte[] = [];
-
-  
   
   // Estadísticas
   estadisticas = {
@@ -63,7 +62,7 @@ export class MisReportesComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    this.loadReportes();
+    this.loadReportesPropios();
   }
 
   ngOnDestroy(): void {
@@ -85,16 +84,16 @@ export class MisReportesComponent implements OnInit, OnDestroy {
     }
   }
 
-  private loadReportes(): void {
+  private loadReportesPropios(): void {
     this.isLoading = true;
     
-    // Simular carga de datos desde el servidor
+    // Simular carga de datos SOLO de reportes del usuario actual
     setTimeout(() => {
-      this.reportes = [
+      this.reportesPropios = [
         {
           id: 1,
-          titulo: 'Robo en la calle 45',
-          descripcion: 'Se presentó un robo a mano armada en la calle 45 con carrera 12. Los delincuentes se movilizaban en motocicleta.',
+          titulo: 'Robo en mi cuadra',
+          descripcion: 'Vi un robo a mano armada en la calle 45 con carrera 12. Los delincuentes se movilizaban en motocicleta negra.',
           categoria: 'seguridad',
           estado: 'en_proceso',
           prioridad: 'alta',
@@ -106,44 +105,13 @@ export class MisReportesComponent implements OnInit, OnDestroy {
             lng: -74.0817
           },
           imagenes: ['assets/reporte1.jpg'],
-          comentariosAdmin: 'Se ha enviado patrulla al área. Caso bajo investigación.'
-        },
-        {
-          id: 2,
-          titulo: 'Semáforo dañado',
-          descripcion: 'El semáforo de la intersección está completamente apagado, causando congestión vehicular.',
-          categoria: 'infraestructura',
-          estado: 'resuelto',
-          prioridad: 'media',
-          fechaCreacion: '2024-01-14T08:15:00',
-          fechaActualizacion: '2024-01-15T16:45:00',
-          ubicacion: {
-            direccion: 'Carrera 15 con Calle 72, Bogotá',
-            lat: 4.6097,
-            lng: -74.0817
-          },
-          comentariosAdmin: 'Semáforo reparado el 15/01/2024. Funcionando correctamente.'
-        },
-        {
-          id: 3,
-          titulo: 'Accidente de tránsito',
-          descripcion: 'Colisión entre dos vehículos particulares. Se requiere presencia de tránsito y ambulancia.',
-          categoria: 'emergencia',
-          estado: 'resuelto',
-          prioridad: 'critica',
-          fechaCreacion: '2024-01-13T16:22:00',
-          fechaActualizacion: '2024-01-13T17:30:00',
-          ubicacion: {
-            direccion: 'Autopista Norte Km 5, Bogotá',
-            lat: 4.6097,
-            lng: -74.0817
-          },
-          comentariosAdmin: 'Atendido por servicios de emergencia. Vía despejada.'
+          comentariosAdmin: 'Se ha enviado patrulla al área. Caso bajo investigación.',
+          esPropio: true
         },
         {
           id: 4,
-          titulo: 'Ruido excesivo',
-          descripcion: 'Establecimiento comercial con música a alto volumen durante horas no permitidas.',
+          titulo: 'Ruido excesivo del bar',
+          descripcion: 'El bar de mi cuadra tiene música muy alta todas las noches después de las 11 PM, violando las normas de ruido.',
           categoria: 'otros',
           estado: 'pendiente',
           prioridad: 'baja',
@@ -153,103 +121,105 @@ export class MisReportesComponent implements OnInit, OnDestroy {
             direccion: 'Calle 85 # 15-20, Bogotá',
             lat: 4.6097,
             lng: -74.0817
-          }
+          },
+          esPropio: true
         },
         {
-          id: 5,
-          titulo: 'Fuga de agua',
-          descripcion: 'Gran fuga de agua en la tubería principal de la calle, causando inundación.',
+          id: 8,
+          titulo: 'Hueco peligroso en la vía',
+          descripcion: 'Hay un hueco muy grande en la carrera 15 que está causando accidentes de motocicletas.',
           categoria: 'infraestructura',
+          estado: 'pendiente',
+          prioridad: 'media',
+          fechaCreacion: '2024-01-17T08:15:00',
+          fechaActualizacion: '2024-01-17T08:15:00',
+          ubicacion: {
+            direccion: 'Carrera 15 # 34-45, Bogotá',
+            lat: 4.6097,
+            lng: -74.0817
+          },
+          esPropio: true
+        },
+        {
+          id: 12,
+          titulo: 'Peligro: Cables eléctricos sueltos',
+          descripcion: 'Cables de alta tensión colgando peligrosamente sobre la calle después de la tormenta de ayer.',
+          categoria: 'emergencia',
+          estado: 'resuelto',
+          prioridad: 'critica',
+          fechaCreacion: '2024-01-10T15:45:00',
+          fechaActualizacion: '2024-01-11T09:30:00',
+          ubicacion: {
+            direccion: 'Avenida 68 # 45-12, Bogotá',
+            lat: 4.6097,
+            lng: -74.0817
+          },
+          comentariosAdmin: 'Cuadrilla de la empresa eléctrica reparó los cables. Peligro neutralizado.',
+          esPropio: true
+        },
+        {
+          id: 15,
+          titulo: 'Intento de robo a mi vehículo',
+          descripcion: 'Intentaron robar mi carro en el parqueadero del supermercado. Los ladrones huyeron cuando llegué.',
+          categoria: 'seguridad',
           estado: 'rechazado',
           prioridad: 'alta',
-          fechaCreacion: '2024-01-12T12:00:00',
-          fechaActualizacion: '2024-01-14T10:15:00',
+          fechaCreacion: '2024-01-09T19:20:00',
+          fechaActualizacion: '2024-01-12T11:15:00',
           ubicacion: {
-            direccion: 'Calle 30 # 25-10, Bogotá',
+            direccion: 'Centro Comercial Andino, Bogotá',
             lat: 4.6097,
             lng: -74.0817
           },
-          comentariosAdmin: 'Reporte duplicado. Ya existe un reporte similar en proceso.'
-        },
-        {
-          id: 6,
-          titulo: 'Intento de robo de vehículo',
-          descripcion: 'Intento de hurto de automóvil en parqueadero público. Los delincuentes huyeron al ser descubiertos.',
-          categoria: 'seguridad',
-          estado: 'pendiente',
-          prioridad: 'alta',
-          fechaCreacion: '2024-01-17T06:45:00',
-          fechaActualizacion: '2024-01-17T06:45:00',
-          ubicacion: {
-            direccion: 'Centro Comercial Plaza Central, Bogotá',
-            lat: 4.6097,
-            lng: -74.0817
-          }
-        },
-        {
-          id: 7,
-          titulo: 'Incendio en casa',
-          descripcion: 'Principio de incendio en vivienda unifamiliar. Bomberos y ambulancia en camino.',
-          categoria: 'emergencia',
-          estado: 'en_proceso',
-          prioridad: 'critica',
-          fechaCreacion: '2024-01-17T11:20:00',
-          fechaActualizacion: '2024-01-17T11:25:00',
-          ubicacion: {
-            direccion: 'Barrio Los Rosales, Calle 95 # 8-14, Bogotá',
-            lat: 4.6097,
-            lng: -74.0817
-          },
-          comentariosAdmin: 'Bomberos en el lugar. Evacuación en proceso.'
+          comentariosAdmin: 'No se encontró evidencia suficiente para proceder. Se recomienda instalar cámaras.',
+          esPropio: true
         }
       ];
       
-      console.log('Reportes cargados:', this.reportes.length); // Debug
+      console.log('Mis reportes cargados:', this.reportesPropios.length);
       this.calcularEstadisticas();
-      this.aplicarFiltros(); // Aplicar filtros después de cargar
+      this.aplicarFiltros();
       this.isLoading = false;
-    }, 1500);
+    }, 1200);
   }
 
   private calcularEstadisticas(): void {
     this.estadisticas = {
-      total: this.reportes.length,
-      pendientes: this.reportes.filter(r => r.estado === 'pendiente').length,
-      enProceso: this.reportes.filter(r => r.estado === 'en_proceso').length,
-      resueltos: this.reportes.filter(r => r.estado === 'resuelto').length,
-      rechazados: this.reportes.filter(r => r.estado === 'rechazado').length
+      total: this.reportesPropios.length,
+      pendientes: this.reportesPropios.filter(r => r.estado === 'pendiente').length,
+      enProceso: this.reportesPropios.filter(r => r.estado === 'en_proceso').length,
+      resueltos: this.reportesPropios.filter(r => r.estado === 'resuelto').length,
+      rechazados: this.reportesPropios.filter(r => r.estado === 'rechazado').length
     };
   }
 
   // Métodos de filtrado
-  onFilterChange(event: any): void {
-    this.selectedFilter = event.target.value;
-    console.log('Filtro cambiado a:', this.selectedFilter); // Debug
+  onFilterChange(event: Event): void {
+    const target = event.target as HTMLSelectElement;
+    this.selectedFilter = target.value;
     this.aplicarFiltros();
   }
 
-  onCategoryChange(event: any): void {
-    this.selectedCategory = event.target.value;
-    console.log('Categoría cambiada a:', this.selectedCategory); // Debug
+  onCategoryChange(event: Event): void {
+    const target = event.target as HTMLSelectElement;
+    this.selectedCategory = target.value;
     this.aplicarFiltros();
   }
 
-  onSearchChange(event: any): void {
-    this.searchTerm = event.target.value;
-    console.log('Búsqueda:', this.searchTerm); // Debug
+  onSearchChange(event: Event): void {
+    const target = event.target as HTMLInputElement;
+    this.searchTerm = target.value;
     this.aplicarFiltros();
   }
 
   private aplicarFiltros(): void {
-    let reportesFiltrados = [...this.reportes];
-    console.log('Aplicando filtros - Reportes originales:', reportesFiltrados.length); // Debug
+    let reportesFiltrados = [...this.reportesPropios];
 
     // Filtro por estado
     if (this.selectedFilter !== 'todos') {
       reportesFiltrados = reportesFiltrados.filter(reporte => 
         reporte.estado === this.selectedFilter
       );
-      console.log('Después de filtro por estado:', reportesFiltrados.length); // Debug
     }
 
     // Filtro por categoría
@@ -257,7 +227,6 @@ export class MisReportesComponent implements OnInit, OnDestroy {
       reportesFiltrados = reportesFiltrados.filter(reporte => 
         reporte.categoria === this.selectedCategory
       );
-      console.log('Después de filtro por categoría:', reportesFiltrados.length); // Debug
     }
 
     // Filtro por búsqueda
@@ -268,11 +237,9 @@ export class MisReportesComponent implements OnInit, OnDestroy {
         reporte.descripcion.toLowerCase().includes(busqueda) ||
         reporte.ubicacion.direccion.toLowerCase().includes(busqueda)
       );
-      console.log('Después de filtro por búsqueda:', reportesFiltrados.length); // Debug
     }
 
     this.reportesFiltrados = reportesFiltrados;
-    console.log('Reportes filtrados finales:', this.reportesFiltrados.length); // Debug
   }
 
   // Métodos de navegación
@@ -379,7 +346,6 @@ export class MisReportesComponent implements OnInit, OnDestroy {
     });
   }
 
-  // Método para obtener tiempo transcurrido
   getTiempoTranscurrido(fecha: string): string {
     const ahora = new Date();
     const fechaReporte = new Date(fecha);
@@ -397,6 +363,20 @@ export class MisReportesComponent implements OnInit, OnDestroy {
       return `Hace ${minutos} minuto${minutos > 1 ? 's' : ''}`;
     } else {
       return 'Hace un momento';
+    }
+  }
+
+  // Método para eliminar reporte (solo si está pendiente)
+  eliminarReporte(reporteId: number): void {
+    const reporte = this.reportesPropios.find(r => r.id === reporteId);
+    if (reporte && reporte.estado === 'pendiente') {
+      if (confirm('¿Estás seguro de que quieres eliminar este reporte?')) {
+        this.reportesPropios = this.reportesPropios.filter(r => r.id !== reporteId);
+        this.calcularEstadisticas();
+        this.aplicarFiltros();
+      }
+    } else {
+      alert('Solo puedes eliminar reportes que estén pendientes.');
     }
   }
 }

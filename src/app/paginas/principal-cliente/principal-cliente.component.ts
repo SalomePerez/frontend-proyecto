@@ -429,6 +429,11 @@ export class PrincipalClienteComponent implements OnInit, OnDestroy, AfterViewIn
     this.router.navigate(['/mis-reportes']);
   }
 
+  // ✅ MÉTODO CLAVE: Navegación a reportes propios
+  goToReportesPropios(): void {
+    this.router.navigate(['/reportes-propios']);
+  }
+
   goToProfile(): void {
     this.closeAllMenus();
     this.router.navigate(['/perfil-cliente']);
