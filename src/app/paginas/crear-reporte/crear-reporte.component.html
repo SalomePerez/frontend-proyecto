@@ -44,7 +44,7 @@
           (click)="isStepAccessible(3) && goToStep(3)"
         >
           <div class="step-number">3</div>
-          <div class="step-label">Ubicación</div>
+          <div class="step-label">Prioridad</div>
         </div>
         
         <div class="progress-line" [class.completed]="currentStep > 3"></div>
@@ -55,6 +55,17 @@
           (click)="isStepAccessible(4) && goToStep(4)"
         >
           <div class="step-number">4</div>
+          <div class="step-label">Ubicación</div>
+        </div>
+        
+        <div class="progress-line" [class.completed]="currentStep > 4"></div>
+        
+        <div 
+          class="progress-step" 
+          [class]="getStepClass(5)"
+          (click)="isStepAccessible(5) && goToStep(5)"
+        >
+          <div class="step-number">5</div>
           <div class="step-label">Evidencias</div>
         </div>
       </div>
@@ -144,8 +155,128 @@
       </div>
     </div>
 
-    <!-- PASO 3: UBICACIÓN -->
+    <!-- PASO 3: PRIORIDAD Y CONFIGURACIONES -->
     <div class="form-step" *ngIf="currentStep === 3">
+      <div class="step-header">
+        <h2>Prioridad y Configuraciones</h2>
+        <p>Define la importancia del reporte y configuraciones de privacidad</p>
+      </div>
+      
+      <div class="config-sections">
+        
+        <!-- Marcador de Importante -->
+        <div class="config-section">
+          <div class="config-header">
+            <h3>¿Es un reporte importante?</h3>
+            <p>Los reportes importantes reciben mayor prioridad y atención</p>
+          </div>
+          
+          <div class="importance-toggle">
+            <button 
+              type="button"
+              class="importance-btn"
+              [class.active]="reporte.esImportante"
+              (click)="toggleImportante()"
+            >
+              <i class="bi bi-exclamation-circle-fill" *ngIf="reporte.esImportante"></i>
+              <i class="bi bi-exclamation-circle" *ngIf="!reporte.esImportante"></i>
+              <span>{{ reporte.esImportante ? 'Es Importante' : 'Marcar como Importante' }}</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Selector de Prioridad -->
+        <div class="config-section">
+          <div class="config-header">
+            <h3>Nivel de Prioridad</h3>
+            <p>Selecciona qué tan urgente es la atención de este reporte</p>
+          </div>
+          
+          <div class="prioridad-grid">
+            <div 
+              class="prioridad-card"
+              *ngFor="let prioridad of prioridadesDisponibles"
+              [class.selected]="reporte.prioridad === prioridad"
+              (click)="setPrioridad(prioridad)"
+            >
+              <div class="prioridad-icon" [style.color]="getPrioridadColor(prioridad)">
+                <i [class]="getPrioridadIcon(prioridad)"></i>
+              </div>
+              <div class="prioridad-info">
+                <h4>{{ prioridad | titlecase }}</h4>
+                <p *ngIf="prioridad === 'baja'">No requiere atención inmediata</p>
+                <p *ngIf="prioridad === 'media'">Atención en horario regular</p>
+                <p *ngIf="prioridad === 'alta'">Requiere atención prioritaria</p>
+                <p *ngIf="prioridad === 'critica'">Emergencia - Atención inmediata</p>
+              </div>
+              <div class="prioridad-check" *ngIf="reporte.prioridad === prioridad">
+                <i class="bi bi-check-circle-fill"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Estado del Reporte -->
+        <div class="config-section">
+          <div class="config-header">
+            <h3>Estado del Reporte</h3>
+            <p>Estado inicial al crear el reporte</p>
+          </div>
+          
+          <div class="estado-display">
+            <div class="estado-info">
+              <div class="estado-icon" [style.color]="getEstadoInfo(reporte.estado).color">
+                <i [class]="getEstadoInfo(reporte.estado).icon"></i>
+              </div>
+              <div class="estado-text">
+                <h4>{{ getEstadoInfo(reporte.estado).texto }}</h4>
+                <p>Tu reporte será revisado por nuestro equipo de moderación</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Configuración de Privacidad -->
+        <div class="config-section">
+          <div class="config-header">
+            <h3>Configuración de Privacidad</h3>
+            <p>Decide si quieres mantener tu identidad privada en este reporte</p>
+          </div>
+          
+          <div class="privacy-options">
+            <div class="privacy-option" [class.selected]="!reporte.esAnonimo" (click)="reporte.esAnonimo = false">
+              <div class="privacy-icon">
+                <i class="bi bi-person-circle"></i>
+              </div>
+              <div class="privacy-info">
+                <h4>Perfil Público</h4>
+                <p>Tu nombre será visible en el reporte</p>
+              </div>
+              <div class="privacy-check" *ngIf="!reporte.esAnonimo">
+                <i class="bi bi-check-circle-fill"></i>
+              </div>
+            </div>
+            
+            <div class="privacy-option" [class.selected]="reporte.esAnonimo" (click)="reporte.esAnonimo = true">
+              <div class="privacy-icon">
+                <i class="bi bi-incognito"></i>
+              </div>
+              <div class="privacy-info">
+                <h4>Reporte Anónimo</h4>
+                <p>Tu identidad se mantendrá privada</p>
+              </div>
+              <div class="privacy-check" *ngIf="reporte.esAnonimo">
+                <i class="bi bi-check-circle-fill"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- PASO 4: UBICACIÓN -->
+    <div class="form-step" *ngIf="currentStep === 4">
       <div class="step-header">
         <h2>Ubicación del Incidente</h2>
         <p>Indica dónde ocurrió el incidente. Puedes mover el marcador para ajustar la ubicación</p>
@@ -163,20 +294,41 @@
             </div>
           </div>
           
-          <button 
-            type="button" 
-            class="btn secondary-btn location-btn"
-            (click)="detectarUbicacionActualEnMapa()"
-            [disabled]="isLoadingLocation"
-          >
-            <i class="bi bi-geo-alt" *ngIf="!isLoadingLocation"></i>
-            <i class="bi bi-arrow-clockwise spin" *ngIf="isLoadingLocation"></i>
-            <span>{{ isLoadingLocation ? 'Detectando...' : 'Usar Mi Ubicación' }}</span>
-          </button>
+          <div class="location-buttons">
+            <button 
+              type="button" 
+              class="btn secondary-btn location-btn"
+              (click)="detectarUbicacionActualEnMapa()"
+              [disabled]="isLoadingLocation"
+            >
+              <i class="bi bi-geo-alt" *ngIf="!isLoadingLocation"></i>
+              <i class="bi bi-arrow-clockwise spin" *ngIf="isLoadingLocation"></i>
+              <span>{{ isLoadingLocation ? 'Detectando...' : 'Mi Ubicación' }}</span>
+            </button>
+            
+            <button 
+              type="button" 
+              class="btn outline-btn location-btn"
+              (click)="forceMapInitialization()"
+              title="Recargar mapa"
+            >
+              <i class="bi bi-arrow-clockwise"></i>
+              <span>Recargar Mapa</span>
+            </button>
+          </div>
         </div>
         
         <div class="map-container">
           <div id="map-container" class="google-map"></div>
+          
+          <!-- Overlay si el mapa está cargando -->
+          <div class="map-loading-overlay" *ngIf="!isMapReady">
+            <div class="loading-content">
+              <div class="spinner"></div>
+              <p>Cargando Google Maps...</p>
+            </div>
+          </div>
+          
           <div class="map-instructions">
             <i class="bi bi-info-circle"></i>
             <span>Haz clic en el mapa o arrastra el marcador para ajustar la ubicación</span>
@@ -189,8 +341,8 @@
       </div>
     </div>
 
-    <!-- PASO 4: EVIDENCIAS -->
-    <div class="form-step" *ngIf="currentStep === 4">
+    <!-- PASO 5: EVIDENCIAS -->
+    <div class="form-step" *ngIf="currentStep === 5">
       <div class="step-header">
         <h2>Evidencias Fotográficas</h2>
         <p>Agrega fotos que ayuden a entender mejor la situación (opcional)</p>

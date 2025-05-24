@@ -1,5 +1,15 @@
 <!-- home.component.html -->
-<div class="home-container">
+
+<!-- Estado de verificación de autenticación -->
+<div *ngIf="isCheckingAuth" class="checking-auth-container">
+  <div class="checking-auth-content">
+    <div class="spinner"></div>
+    <p>Verificando sesión...</p>
+  </div>
+</div>
+
+<!-- Contenido principal - solo se muestra después de verificar autenticación -->  
+<div *ngIf="!isCheckingAuth" class="home-container">
   
   <!-- Sección izquierda - Información de la app -->
   <section class="left-section" aria-label="Información de la aplicación">
@@ -53,8 +63,29 @@
           <h4 class="access-title">Accede a tu cuenta</h4>
           
           <div class="button-group">
-            <button type="button" class="btn btn-register" (click)="navigateToRegister()">Regístrate</button>
-            <button type="button" class="btn btn-login" (click)="navigateToLogin()">Inicia sesión</button>
+            <button 
+              type="button" 
+              class="btn btn-register" 
+              (click)="navigateToRegister()"
+              [disabled]="isLoading">
+              <span *ngIf="!isLoading">Regístrate</span>
+              <span *ngIf="isLoading">
+                <div class="btn-spinner"></div>
+                Cargando...
+              </span>
+            </button>
+            
+            <button 
+              type="button" 
+              class="btn btn-login" 
+              (click)="navigateToLogin()"
+              [disabled]="isLoading">
+              <span *ngIf="!isLoading">Inicia sesión</span>
+              <span *ngIf="isLoading">
+                <div class="btn-spinner"></div>
+                Cargando...
+              </span>
+            </button>
           </div>
         </div>
       </div>
@@ -63,7 +94,8 @@
       <button 
         class="floating-action-btn" 
         aria-label="Acciones rápidas" 
-        (click)="showQuickActions()">
+        (click)="showQuickActions()"
+        [disabled]="isLoading">
         <i class="fas fa-plus" aria-hidden="true"></i>
       </button>
     </div>

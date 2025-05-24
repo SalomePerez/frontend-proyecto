@@ -170,7 +170,7 @@ export class InicioSesionComponent implements OnInit {
         this.router.navigate(['/inicio-admin']);
         break;
       case 'CLIENTE':
-        this.router.navigate(['/inicio-cliente']);
+        this.router.navigate(['/principal-cliente']);
         break;
       default:
         this.router.navigate(['/home']);
