@@ -182,11 +182,11 @@
         </div>
 
         <div class="reporte-actions">
-          <button class="btn secondary-btn" (click)="verDetalleReporte(reporte.id)">
+          <button class="btn secondary-btn" (click)="verDetalles(reporte.id)">
             <i class="bi bi-eye"></i>
             Ver Detalles
           </button>
-          <button 
+          <button   
             class="btn outline-btn" 
             (click)="editarReporte(reporte.id)"
             *ngIf="reporte.estado === 'pendiente'"

@@ -45,6 +45,9 @@ export class MisReportesComponent implements OnInit, OnDestroy {
   reportes: Reporte[] = [];
   reportesFiltrados: Reporte[] = [];
 
+  verDetalles(reporteId: number): void {
+  this.router.navigate(['/detalle-reporte-subidos'], { queryParams: { id: reporteId } });
+}
   
   
   // Estadísticas
@@ -285,7 +288,7 @@ export class MisReportesComponent implements OnInit, OnDestroy {
   }
 
   verDetalleReporte(reporteId: number): void {
-    this.router.navigate(['/detalle-reporte'], { queryParams: { id: reporteId } });
+    this.router.navigate(['/detalle-reporte-subidos'], { queryParams: { id: reporteId } }); // ✅ Correcto
   }
 
   editarReporte(reporteId: number): void {

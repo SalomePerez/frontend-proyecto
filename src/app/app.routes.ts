@@ -20,6 +20,9 @@ import { CrearReporteComponent } from './paginas/crear-reporte/crear-reporte.com
 import { DetalleReporteComponent } from './paginas/detalle-reporte/detalle-reporte.component';
 import { MisReportesComponent } from './paginas/mis-reportes/mis-reportes.component';
 import { ReportesPropiosComponent } from './paginas/reportes-propios/reportes-propios.component';
+import { EditarReporteComponent } from './paginas/editar-reporte/editar-reporte.component';
+import { DetalleReporteSubidosComponent } from './paginas/detalles-reportes-subidos/detalles-reportes-subidos.component';
+
 
 export const routes: Routes = [
   
@@ -72,12 +75,27 @@ export const routes: Routes = [
     canActivate: [AuthGuard],
     data: { role: 'CLIENTE' }
   },
+
+  {
+  path: 'editar-reporte',
+  component: EditarReporteComponent,
+  canActivate: [AuthGuard],
+  data: { role: 'CLIENTE' }
+},
+
+  {
+  path: 'detalle-reporte-subidos',
+  component: DetalleReporteSubidosComponent
+},
+
   { 
     path: 'reportes-propios', 
     component: ReportesPropiosComponent,
     canActivate: [AuthGuard],
     data: { role: 'CLIENTE' }
   },
+
+
 
   // ===== RUTA WILDCARD (DEBE IR AL FINAL) =====
   { path: '**', redirectTo: '/home' }

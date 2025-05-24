@@ -1,0 +1,294 @@
+<div class="editar-reporte-container">
+  
+  <!-- Loading -->
+  <div class="loading-container" *ngIf="isLoading">
+    <div class="loading-content">
+      <div class="spinner"></div>
+      <p>Cargando datos del reporte...</p>
+    </div>
+  </div>
+
+  <!-- Error Container -->
+  <div class="error-container" *ngIf="error && !isLoading">
+    <div class="error-content">
+      <i class="bi bi-exclamation-triangle"></i>
+      <h3>Error</h3>
+      <p>{{ error }}</p>
+      <button class="btn primary-btn" (click)="goBack()">
+        <i class="bi bi-arrow-left"></i>
+        Volver
+      </button>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="main-content" *ngIf="reporte && !isLoading && !error">
+    
+    <!-- Header -->
+    <header class="page-header">
+      <div class="header-left">
+        <button class="back-btn" (click)="goBack()" title="Volver al detalle">
+          <i class="bi bi-arrow-left"></i>
+        </button>
+        <div class="page-title-section">
+          <h1 class="page-title">Editar Reporte</h1>
+          <p class="page-subtitle">Modificar información del reporte #{{ reporte.id }}</p>
+        </div>
+      </div>
+      <div class="header-right">
+        <div class="status-info">
+          <span class="status-label">Estado:</span>
+          <span class="status-badge estado-{{ reporte.estado }}">{{ reporte.estado | titlecase }}</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Form Container -->
+    <div class="form-container">
+      <form [formGroup]="editarForm" (ngSubmit)="onSubmit()" class="reporte-form">
+        
+        <!-- Información Básica -->
+        <section class="form-section">
+          <div class="section-header">
+            <i class="bi bi-file-text"></i>
+            <h2>Información Básica</h2>
+          </div>
+
+          <!-- Título -->
+          <div class="form-group">
+            <label for="titulo" class="form-label">
+              Título del Reporte *
+              <span class="field-info">Describe brevemente el incidente</span>
+            </label>
+            <div class="input-container">
+              <input 
+                type="text" 
+                id="titulo"
+                formControlName="titulo"
+                class="form-control"
+                [class.error]="isFieldInvalid('titulo')"
+                placeholder="Ej: Robo en mi cuadra, Hueco en la vía..."
+                maxlength="100"
+              >
+              <div class="char-counter">
+                <span>{{ editarForm.get('titulo')?.value?.length || 0 }}/100</span>
+              </div>
+            </div>
+            <div class="error-message" *ngIf="isFieldInvalid('titulo')">
+              {{ getFieldError('titulo') }}
+            </div>
+          </div>
+
+          <!-- Categoría -->
+          <div class="form-group">
+            <label for="categoria" class="form-label">Categoría *</label>
+            <div class="select-container">
+              <select 
+                id="categoria"
+                formControlName="categoria"
+                class="form-control"
+                [class.error]="isFieldInvalid('categoria')"
+              >
+                <option value="">Seleccione una categoría</option>
+                <option *ngFor="let cat of categorias" [value]="cat.value">
+                  {{ cat.label }}
+                </option>
+              </select>
+              <div class="selected-category" *ngIf="getCategoriaSeleccionada()">
+                <i [class]="getCategoriaSeleccionada()?.icon" [style.color]="getCategoriaSeleccionada()?.color"></i>
+                <span>{{ getCategoriaSeleccionada()?.label }}</span>
+              </div>
+            </div>
+            <div class="error-message" *ngIf="isFieldInvalid('categoria')">
+              {{ getFieldError('categoria') }}
+            </div>
+          </div>
+
+          <!-- Prioridad -->
+          <div class="form-group">
+            <label for="prioridad" class="form-label">Nivel de Prioridad *</label>
+            <div class="select-container">
+              <select 
+                id="prioridad"
+                formControlName="prioridad"
+                class="form-control"
+                [class.error]="isFieldInvalid('prioridad')"
+              >
+                <option value="">Seleccione la prioridad</option>
+                <option *ngFor="let prio of prioridades" [value]="prio.value">
+                  {{ prio.label }}
+                </option>
+              </select>
+              <div class="selected-priority" *ngIf="getPrioridadSeleccionada()">
+                <span class="priority-indicator" [style.background-color]="getPrioridadSeleccionada()?.color"></span>
+                <span>{{ getPrioridadSeleccionada()?.label }}</span>
+              </div>
+            </div>
+            <div class="error-message" *ngIf="isFieldInvalid('prioridad')">
+              {{ getFieldError('prioridad') }}
+            </div>
+          </div>
+        </section>
+
+        <!-- Descripción Detallada -->
+        <section class="form-section">
+          <div class="section-header">
+            <i class="bi bi-chat-text"></i>
+            <h2>Descripción Detallada</h2>
+          </div>
+
+          <div class="form-group">
+            <label for="descripcion" class="form-label">
+              Describe lo ocurrido *
+              <span class="field-info">Proporciona todos los detalles posibles</span>
+            </label>
+            <div class="textarea-container">
+              <textarea 
+                id="descripcion"
+                formControlName="descripcion"
+                class="form-control textarea-large"
+                [class.error]="isFieldInvalid('descripcion')"
+                placeholder="Describe detalladamente lo que ocurrió, cuándo, dónde, quiénes estuvieron involucrados, etc."
+                rows="6"
+                maxlength="1000"
+              ></textarea>
+              <div class="char-counter">
+                <span>{{ editarForm.get('descripcion')?.value?.length || 0 }}/1000</span>
+              </div>
+            </div>
+            <div class="form-tips">
+              <i class="bi bi-lightbulb"></i>
+              <span>Incluye: hora, lugar exacto, personas involucradas, qué pasó exactamente</span>
+            </div>
+            <div class="error-message" *ngIf="isFieldInvalid('descripcion')">
+              {{ getFieldError('descripcion') }}
+            </div>
+          </div>
+        </section>
+
+        <!-- Ubicación -->
+        <section class="form-section">
+          <div class="section-header">
+            <i class="bi bi-geo-alt"></i>
+            <h2>Ubicación del Incidente</h2>
+          </div>
+
+          <div class="form-group">
+            <label for="ubicacion-direccion" class="form-label">
+              Dirección Completa *
+              <span class="field-info">Sé lo más específico posible</span>
+            </label>
+            <div class="input-with-button">
+              <input 
+                type="text" 
+                id="ubicacion-direccion"
+                formControlName="ubicacion.direccion"
+                class="form-control"
+                [class.error]="isFieldInvalid('ubicacion.direccion')"
+                placeholder="Ej: Calle 45 # 12-34, Barrio Centro, Bogotá"
+              >
+              <button 
+                type="button" 
+                class="btn-location"
+                title="Obtener ubicación actual"
+                (click)="obtenerUbicacionActual()"
+              >
+                <i class="bi bi-geo-alt"></i>
+              </button>
+            </div>
+            <div class="error-message" *ngIf="isFieldInvalid('ubicacion.direccion')">
+              {{ getFieldError('ubicacion.direccion') }}
+            </div>
+          </div>
+        </section>
+
+        <!-- Información de Contacto -->
+        <section class="form-section">
+          <div class="section-header">
+            <i class="bi bi-person-circle"></i>
+            <h2>Información de Contacto</h2>
+            <span class="section-optional">Opcional</span>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="telefono" class="form-label">Teléfono de Contacto</label>
+              <input 
+                type="tel" 
+                id="telefono"
+                formControlName="telefono"
+                class="form-control"
+                placeholder="300-123-4567"
+              >
+            </div>
+
+            <div class="form-group">
+              <label for="email" class="form-label">Correo Electrónico</label>
+              <input 
+                type="email" 
+                id="email"
+                formControlName="email"
+                class="form-control"
+                [class.error]="isFieldInvalid('email')"
+                placeholder="tu-email@ejemplo.com"
+              >
+              <div class="error-message" *ngIf="isFieldInvalid('email')">
+                {{ getFieldError('email') }}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Botones de Acción -->
+        <div class="form-actions">
+          <button 
+            type="button" 
+            class="btn secondary-btn"
+            (click)="cancelarEdicion()"
+            [disabled]="isSaving"
+          >
+            <i class="bi bi-x-circle"></i>
+            Cancelar
+          </button>
+          
+          <button 
+            type="submit" 
+            class="btn primary-btn"
+            [disabled]="editarForm.invalid || isSaving"
+          >
+            <i class="bi bi-check-circle" *ngIf="!isSaving"></i>
+            <i class="bi bi-arrow-repeat spin" *ngIf="isSaving"></i>
+            {{ isSaving ? 'Guardando cambios...' : 'Guardar Cambios' }}
+          </button>
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+  <!-- Success Notification -->
+  <div class="success-notification-overlay" *ngIf="showSuccessNotification">
+    <div class="success-notification">
+      <div class="success-icon">
+        <i class="bi bi-check-circle-fill"></i>
+      </div>
+      <h3>¡Reporte Actualizado!</h3>
+      <p>Los cambios han sido guardados exitosamente</p>
+      <div class="success-details">
+        <div class="detail-item">
+          <i class="bi bi-calendar"></i>
+          <span>{{ currentTime | date:'dd/MM/yyyy' }}</span>
+        </div>
+        <div class="detail-item">
+          <i class="bi bi-clock"></i>
+          <span>{{ currentTimeFormatted }}</span>
+        </div>
+      </div>
+      <div class="redirect-info">
+        <i class="bi bi-arrow-right"></i>
+        <span>Redirigiendo al detalle del reporte...</span>
+      </div>
+    </div>
+  </div>
+
+</div>
