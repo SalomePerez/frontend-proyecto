@@ -18,6 +18,10 @@ interface CrearReporteDTO {
   categoria: string;
   ubicacion: UbicacionDTO;
   idUsuario: string;
+  esImportante: boolean;
+  prioridad: 'baja' | 'media' | 'alta' | 'critica';
+  estado: 'pendiente' | 'en_proceso' | 'resuelto' | 'rechazado';
+  esAnonimo: boolean;
 }
 
 interface Categoria {
@@ -51,7 +55,11 @@ export class CrearReporteComponent implements OnInit, OnDestroy, AfterViewInit {
       longitud: 0,
       direccion: ''
     },
-    idUsuario: ''
+    idUsuario: '',
+    esImportante: false,
+    prioridad: 'media',
+    estado: 'pendiente',
+    esAnonimo: false
   };
 
   // Estados del formulario
@@ -61,7 +69,7 @@ export class CrearReporteComponent implements OnInit, OnDestroy, AfterViewInit {
   
   // Estados de la UI
   currentStep: number = 1;
-  totalSteps: number = 4;
+  totalSteps: number = 5;
   isLoadingLocation: boolean = false;
   showLocationSelector: boolean = false;
 
@@ -69,6 +77,7 @@ export class CrearReporteComponent implements OnInit, OnDestroy, AfterViewInit {
   categorias: Categoria[] = [];
   fotosSeleccionadas: File[] = [];
   previewUrls: string[] = [];
+  prioridadesDisponibles: Array<'baja' | 'media' | 'alta' | 'critica'> = ['baja', 'media', 'alta', 'critica'];
   
   // Mapa
   map: any = null;
@@ -156,8 +165,8 @@ export class CrearReporteComponent implements OnInit, OnDestroy, AfterViewInit {
       if (this.currentStep < this.totalSteps) {
         this.currentStep++;
         
-        // Inicializar mapa cuando llegue al paso 3 (ubicación)
-        if (this.currentStep === 3) {
+        // Inicializar mapa cuando llegue al paso 4 (ubicación)
+        if (this.currentStep === 4) {
           setTimeout(() => this.initializeMap(), 100);
         }
       }
@@ -173,7 +182,7 @@ export class CrearReporteComponent implements OnInit, OnDestroy, AfterViewInit {
   goToStep(step: number): void {
     if (step <= this.currentStep || this.validateStepsUpTo(step - 1)) {
       this.currentStep = step;
-      if (step === 3) {
+      if (step === 4) {
         setTimeout(() => this.initializeMap(), 100);
       }
     }
@@ -209,14 +218,18 @@ export class CrearReporteComponent implements OnInit, OnDestroy, AfterViewInit {
         }
         break;
 
-      case 3: // Ubicación
+      case 3: // Prioridad y configuraciones
+        // Validaciones opcionales, ya que tienen valores por defecto
+        break;
+
+      case 4: // Ubicación
         if (!this.reporte.ubicacion.direccion.trim()) {
           this.formErrors.ubicacion = 'Debe seleccionar una ubicación';
           isValid = false;
         }
         break;
 
-      case 4: // Fotos (opcional pero si hay, debe tener al menos una)
+      case 5: // Fotos (opcional pero si hay, debe tener al menos una)
         // Las fotos son opcionales según tu diseño de la imagen
         break;
     }
@@ -237,7 +250,71 @@ export class CrearReporteComponent implements OnInit, OnDestroy, AfterViewInit {
     return true;
   }
 
-  // MANEJO DE CATEGORÍAS
+  // MANEJO DE PRIORIDAD Y CONFIGURACIONES
+  toggleImportante(): void {
+    this.reporte.esImportante = !this.reporte.esImportante;
+    // Si es importante, automáticamente establecer prioridad alta
+    if (this.reporte.esImportante && this.reporte.prioridad === 'baja') {
+      this.reporte.prioridad = 'alta';
+    }
+  }
+
+  setPrioridad(prioridad: 'baja' | 'media' | 'alta' | 'critica'): void {
+    this.reporte.prioridad = prioridad;
+    // Si es crítica, automáticamente marcar como importante
+    if (prioridad === 'critica') {
+      this.reporte.esImportante = true;
+    }
+  }
+
+  toggleAnonimo(): void {
+    this.reporte.esAnonimo = !this.reporte.esAnonimo;
+  }
+
+  getPrioridadColor(prioridad: string): string {
+    switch (prioridad) {
+      case 'baja':
+        return '#10b981';
+      case 'media':
+        return '#f59e0b';
+      case 'alta':
+        return '#ef4444';
+      case 'critica':
+        return '#dc2626';
+      default:
+        return '#6b7280';
+    }
+  }
+
+  getPrioridadIcon(prioridad: string): string {
+    switch (prioridad) {
+      case 'baja':
+        return 'bi bi-flag';
+      case 'media':
+        return 'bi bi-flag-fill';
+      case 'alta':
+        return 'bi bi-exclamation-triangle';
+      case 'critica':
+        return 'bi bi-exclamation-triangle-fill';
+      default:
+        return 'bi bi-flag';
+    }
+  }
+
+  getEstadoInfo(estado: string): { color: string, icon: string, texto: string } {
+    switch (estado) {
+      case 'pendiente':
+        return { color: '#f59e0b', icon: 'bi bi-clock', texto: 'Pendiente de Revisión' };
+      case 'en_proceso':
+        return { color: '#3b82f6', icon: 'bi bi-gear', texto: 'En Proceso' };
+      case 'resuelto':
+        return { color: '#10b981', icon: 'bi bi-check-circle', texto: 'Resuelto' };
+      case 'rechazado':
+        return { color: '#ef4444', icon: 'bi bi-x-circle', texto: 'Rechazado' };
+      default:
+        return { color: '#6b7280', icon: 'bi bi-question-circle', texto: 'Desconocido' };
+    }
+  }
   selectCategoria(categoria: Categoria): void {
     this.reporte.categoria = categoria.id;
   }
