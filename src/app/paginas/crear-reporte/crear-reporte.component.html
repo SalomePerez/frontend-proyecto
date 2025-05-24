@@ -1,47 +1,299 @@
-<form [formGroup]="crearReporteForm" (ngSubmit)="crearReporte()">
-  <div>
-    <label>Título: </label>
-    <input type="text" formControlName="titulo" />
+<div class="crear-reporte-container">
+  <!-- Header -->
+  <header class="page-header">
+    <div class="header-left">
+      <button class="back-btn" (click)="goBack()" title="Volver al dashboard">
+        <i class="bi bi-arrow-left"></i>
+      </button>
+      <div class="page-title-section">
+        <h1 class="page-title">Crear Nuevo Reporte</h1>
+        <p class="page-subtitle">Reporta incidentes de seguridad en tu comunidad</p>
+      </div>
+    </div>
+  </header>
+
+  <!-- Indicador de progreso -->
+  <section class="progress-section">
+    <div class="progress-container">
+      <div class="progress-steps">
+        <div 
+          class="progress-step" 
+          [class]="getStepClass(1)"
+          (click)="isStepAccessible(1) && goToStep(1)"
+        >
+          <div class="step-number">1</div>
+          <div class="step-label">Información</div>
+        </div>
+        
+        <div class="progress-line" [class.completed]="currentStep > 1"></div>
+        
+        <div 
+          class="progress-step" 
+          [class]="getStepClass(2)"
+          (click)="isStepAccessible(2) && goToStep(2)"
+        >
+          <div class="step-number">2</div>
+          <div class="step-label">Categoría</div>
+        </div>
+        
+        <div class="progress-line" [class.completed]="currentStep > 2"></div>
+        
+        <div 
+          class="progress-step" 
+          [class]="getStepClass(3)"
+          (click)="isStepAccessible(3) && goToStep(3)"
+        >
+          <div class="step-number">3</div>
+          <div class="step-label">Ubicación</div>
+        </div>
+        
+        <div class="progress-line" [class.completed]="currentStep > 3"></div>
+        
+        <div 
+          class="progress-step" 
+          [class]="getStepClass(4)"
+          (click)="isStepAccessible(4) && goToStep(4)"
+        >
+          <div class="step-number">4</div>
+          <div class="step-label">Evidencias</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Contenido del formulario -->
+  <main class="form-content">
+    
+    <!-- PASO 1: INFORMACIÓN BÁSICA -->
+    <div class="form-step" *ngIf="currentStep === 1">
+      <div class="step-header">
+        <h2>Información Básica del Reporte</h2>
+        <p>Proporciona los detalles principales del incidente</p>
+      </div>
+      
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="titulo" class="form-label">
+            Título del Reporte *
+            <span class="char-count">{{ reporte.titulo.length }}/150</span>
+          </label>
+          <input 
+            type="text" 
+            id="titulo"
+            class="form-input"
+            [(ngModel)]="reporte.titulo"
+            placeholder="Ej: Robo en la calle 45"
+            maxlength="150"
+            [class.error]="formErrors.titulo"
+          >
+          <div class="error-message" *ngIf="formErrors.titulo">
+            {{ formErrors.titulo }}
+          </div>
+        </div>
+
+        <div class="form-group full-width">
+          <label for="descripcion" class="form-label">
+            Descripción Detallada *
+            <span class="char-count">{{ reporte.descripcion.length }}/400</span>
+          </label>
+          <textarea 
+            id="descripcion"
+            class="form-textarea"
+            [(ngModel)]="reporte.descripcion"
+            placeholder="Describe detalladamente lo que ocurrió, cuándo, quiénes estuvieron involucrados, etc."
+            maxlength="400"
+            rows="6"
+            [class.error]="formErrors.descripcion"
+          ></textarea>
+          <div class="error-message" *ngIf="formErrors.descripcion">
+            {{ formErrors.descripcion }}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PASO 2: CATEGORÍA -->
+    <div class="form-step" *ngIf="currentStep === 2">
+      <div class="step-header">
+        <h2>Selecciona la Categoría</h2>
+        <p>Elige la categoría que mejor describe tu reporte</p>
+      </div>
+      
+      <div class="categorias-grid">
+        <div 
+          class="categoria-card" 
+          *ngFor="let categoria of categorias"
+          (click)="selectCategoria(categoria)"
+          [class.selected]="reporte.categoria === categoria.id"
+        >
+          <div class="categoria-icon" [style.background-color]="categoria.color">
+            <i [class]="categoria.icono"></i>
+          </div>
+          <div class="categoria-info">
+            <h3>{{ categoria.nombre }}</h3>
+            <p>{{ categoria.descripcion }}</p>
+          </div>
+          <div class="categoria-check" *ngIf="reporte.categoria === categoria.id">
+            <i class="bi bi-check-circle-fill"></i>
+          </div>
+        </div>
+      </div>
+      
+      <div class="error-message" *ngIf="formErrors.categoria">
+        {{ formErrors.categoria }}
+      </div>
+    </div>
+
+    <!-- PASO 3: UBICACIÓN -->
+    <div class="form-step" *ngIf="currentStep === 3">
+      <div class="step-header">
+        <h2>Ubicación del Incidente</h2>
+        <p>Indica dónde ocurrió el incidente. Puedes mover el marcador para ajustar la ubicación</p>
+      </div>
+      
+      <div class="ubicacion-section">
+        <div class="ubicacion-controls">
+          <div class="direccion-display">
+            <div class="direccion-icon">
+              <i class="bi bi-geo-alt-fill"></i>
+            </div>
+            <div class="direccion-text">
+              <strong>Ubicación seleccionada:</strong>
+              <p>{{ reporte.ubicacion.direccion || 'Selecciona una ubicación en el mapa' }}</p>
+            </div>
+          </div>
+          
+          <button 
+            type="button" 
+            class="btn secondary-btn location-btn"
+            (click)="detectarUbicacionActualEnMapa()"
+            [disabled]="isLoadingLocation"
+          >
+            <i class="bi bi-geo-alt" *ngIf="!isLoadingLocation"></i>
+            <i class="bi bi-arrow-clockwise spin" *ngIf="isLoadingLocation"></i>
+            <span>{{ isLoadingLocation ? 'Detectando...' : 'Usar Mi Ubicación' }}</span>
+          </button>
+        </div>
+        
+        <div class="map-container">
+          <div id="map-container" class="google-map"></div>
+          <div class="map-instructions">
+            <i class="bi bi-info-circle"></i>
+            <span>Haz clic en el mapa o arrastra el marcador para ajustar la ubicación</span>
+          </div>
+        </div>
+        
+        <div class="error-message" *ngIf="formErrors.ubicacion">
+          {{ formErrors.ubicacion }}
+        </div>
+      </div>
+    </div>
+
+    <!-- PASO 4: EVIDENCIAS -->
+    <div class="form-step" *ngIf="currentStep === 4">
+      <div class="step-header">
+        <h2>Evidencias Fotográficas</h2>
+        <p>Agrega fotos que ayuden a entender mejor la situación (opcional)</p>
+      </div>
+      
+      <div class="fotos-section">
+        <div class="upload-area">
+          <input 
+            type="file" 
+            id="fotos" 
+            multiple 
+            accept="image/*"
+            (change)="onFileSelected($event)"
+            style="display: none;"
+          >
+          <label for="fotos" class="upload-label">
+            <div class="upload-icon">
+              <i class="bi bi-cloud-upload"></i>
+            </div>
+            <div class="upload-text">
+              <strong>Haz clic para seleccionar fotos</strong>
+              <p>O arrastra y suelta las imágenes aquí</p>
+              <small>PNG, JPG, JPEG hasta 5MB cada una</small>
+            </div>
+          </label>
+        </div>
+        
+        <div class="fotos-preview" *ngIf="previewUrls.length > 0">
+          <h4>Fotos seleccionadas ({{ previewUrls.length }})</h4>
+          <div class="fotos-grid">
+            <div class="foto-item" *ngFor="let url of previewUrls; let i = index">
+              <img [src]="url" [alt]="'Foto ' + (i + 1)">
+              <button 
+                type="button" 
+                class="remove-foto"
+                (click)="removePhoto(i)"
+                title="Eliminar foto"
+              >
+                <i class="bi bi-x"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Botones de navegación -->
+  <footer class="form-footer">
+    <div class="footer-content">
+      <button 
+        type="button" 
+        class="btn secondary-btn"
+        (click)="previousStep()"
+        *ngIf="currentStep > 1"
+      >
+        <i class="bi bi-arrow-left"></i>
+        Anterior
+      </button>
+      
+      <div class="spacer"></div>
+      
+      <button 
+        type="button" 
+        class="btn primary-btn"
+        (click)="nextStep()"
+        *ngIf="currentStep < totalSteps"
+      >
+        Siguiente
+        <i class="bi bi-arrow-right"></i>
+      </button>
+      
+      <button 
+        type="button" 
+        class="btn success-btn"
+        (click)="submitReporte()"
+        *ngIf="currentStep === totalSteps"
+        [disabled]="isSubmitting"
+      >
+        <i class="bi bi-check-circle" *ngIf="!isSubmitting"></i>
+        <i class="bi bi-arrow-clockwise spin" *ngIf="isSubmitting"></i>
+        <span>{{ isSubmitting ? 'Enviando...' : 'Enviar Reporte' }}</span>
+      </button>
+    </div>
+    
+    <div class="error-message" *ngIf="formErrors.general">
+      {{ formErrors.general }}
+    </div>
+  </footer>
+
+  <!-- Modal de éxito -->
+  <div class="success-modal" *ngIf="showSuccessMessage">
+    <div class="modal-content">
+      <div class="success-icon">
+        <i class="bi bi-check-circle-fill"></i>
+      </div>
+      <h3>¡Reporte Enviado Exitosamente!</h3>
+      <p>Tu reporte ha sido recibido y será revisado por nuestro equipo. Te notificaremos sobre cualquier actualización.</p>
+      <div class="loading-indicator">
+        <div class="spinner-small"></div>
+        <span>Redirigiendo a tus reportes...</span>
+      </div>
+    </div>
   </div>
-
-  <div>
-    <label>Descripción: </label>
-    <textarea formControlName="descripcion"></textarea>
-  </div>
-
-
-<div class="col-12 col-sm-6">
-   <label class="form-label">Categoría: </label>
-   <select class="form-select" formControlName="categoria">
-       <option value="">Seleccione una categoría</option>
-       @for (item of categorias; track $index) {
-           <option value="{{item}}">{{item}}</option>
-       }
-   </select>
 </div>
-
-
-
-<div>
-  <label>Ciudad: </label>
-  <select formControlName="ciudad">
-    <option value="" disabled selected>Seleccione una ciudad</option>
-        @for (item of ciudades; track $index) {
-        <option value="{{item}}">{{item}}</option>
-        }  </select>
-</div>
-
-
-  <div>
-    <label>Ubicación: </label>
-    <input type="text" formControlName="ubicacion" />
-  </div>
-
-  <div>
-  <label>Imagen reporte: </label>
-  <input type="file" (change)="onFileChange($event)" multiple />
-</div>
-
-
-  <button type="submit" [disabled]="crearReporteForm.invalid">Crear reporte</button>
-</form>
