@@ -46,6 +46,25 @@ export interface LoginApiResponse extends MensajeDTO<LoginResponse> {
   // La respuesta será: { error: false, mensaje: { token: "..." } }
 }
 
+// NUEVAS INTERFACES PARA RECUPERACIÓN DE CONTRASEÑA
+export interface RecuperarContraseniaRequest {
+  email: string;
+}
+
+export interface RecuperarContraseniaResponse extends MensajeDTO<string> {
+  // La respuesta será: { error: false, mensaje: "Código enviado correctamente al correo" }
+}
+
+export interface CambiarPasswordRequest {
+  email: string;
+  codigo: string;
+  nuevaPassword: string;
+}
+
+export interface CambiarPasswordResponse extends MensajeDTO<string> {
+  // La respuesta será: { error: false, mensaje: "Contraseña actualizada correctamente" }
+}
+
 export interface ApiError {
   message: string;
   status?: number;
@@ -124,6 +143,54 @@ export class UsuarioService {
   }
 
   /**
+   * NUEVA: Enviar código de recuperación de contraseña
+   * @param email Email del usuario
+   * @returns Observable con la respuesta del servidor
+   */
+  enviarCodigoRecuperacion(email: string): Observable<RecuperarContraseniaResponse> {
+    const requestData: RecuperarContraseniaRequest = { email: email.trim() };
+    
+    console.log('Enviando código de recuperación para:', email);
+    console.log('URL:', `${this.API_URL}/recuperarContrasenia`);
+    console.log('Datos enviados:', requestData);
+    
+    return this.http.post<RecuperarContraseniaResponse>(
+      `${this.API_URL}/recuperarContrasenia`,
+      requestData,
+      this.httpOptions
+    ).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  /**
+   * NUEVA: Cambiar contraseña con código de verificación
+   * @param email Email del usuario
+   * @param codigo Código de verificación recibido
+   * @param nuevaPassword Nueva contraseña
+   * @returns Observable con la respuesta del servidor
+   */
+  cambiarContrasenia(email: string, codigo: string, nuevaPassword: string): Observable<CambiarPasswordResponse> {
+    const requestData: CambiarPasswordRequest = {
+      email: email.trim(),
+      codigo: codigo.trim(),
+      nuevaPassword: nuevaPassword
+    };
+    
+    console.log('Cambiando contraseña para:', email);
+    console.log('URL:', `${this.API_URL}/cambiarContrasenia`);
+    console.log('Datos enviados:', { ...requestData, nuevaPassword: '***' }); // No loggear la contraseña
+    
+    return this.http.put<CambiarPasswordResponse>(
+      `${this.API_URL}/cambiarContrasenia`,
+      requestData,
+      this.httpOptions
+    ).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  /**
    * Reenviar código de activación (si tienes este endpoint)
    * @param email Email del usuario
    */
@@ -163,7 +230,12 @@ export class UsuarioService {
       // Error del lado del servidor
       switch (error.status) {
         case 400:
-          errorMessage = 'Datos de entrada inválidos. Verifica la información ingresada.';
+          // Verificar si hay un mensaje específico del backend
+          if (error.error?.mensaje) {
+            errorMessage = error.error.mensaje;
+          } else {
+            errorMessage = 'Datos de entrada inválidos. Verifica la información ingresada.';
+          }
           break;
         case 401:
           errorMessage = 'Email o contraseña incorrectos.';
@@ -171,8 +243,14 @@ export class UsuarioService {
         case 403:
           errorMessage = 'No tienes permisos para realizar esta acción.';
           break;
+        case 404:
+          errorMessage = 'No se encontró una cuenta con este correo electrónico.';
+          break;
         case 409:
           errorMessage = 'El email electrónico ya está registrado. Usa otro email.';
+          break;
+        case 429:
+          errorMessage = 'Has excedido el límite de intentos. Intenta más tarde.';
           break;
         case 500:
           errorMessage = 'Error interno del servidor. Inténtalo más tarde.';

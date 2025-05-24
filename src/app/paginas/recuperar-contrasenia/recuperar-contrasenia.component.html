@@ -4,9 +4,9 @@
   <section class="left-section" aria-label="Información de la aplicación">
     <div class="brand-section">
       <div class="logo-container">
-        <img 
-          src="assets/logo.png" 
-          alt="Logo de SegurApp" 
+        <img
+          src="assets/logo.png"
+          alt="Logo de SegurApp"
           class="logo-icon" />
         <h1 class="brand-name">SegurApp</h1>
       </div>
@@ -20,7 +20,8 @@
 
       <div class="description-section">
         <p class="description">
-          Conéctate con tu comunidad y mejora la seguridad. Reporta incidentes, recibe 
+          Conéctate con tu comunidad y mejora la seguridad. Reporta incidentes,
+          recibe
           alertas y colabora por un entorno más seguro. ¡Actúa con SegurApp!
         </p>
       </div>
@@ -30,28 +31,33 @@
   <!-- Sección derecha - Formulario de recuperar contraseña -->
   <div class="right-panel">
     <h2 class="form-title">Recupera tu contraseña</h2>
-    <p class="form-subtitle">Ingresa tu correo para enviar un código para restablecer tu contraseña</p>
+    <p class="form-subtitle">Ingresa tu correo para enviar un código para
+      restablecer tu contraseña</p>
 
-    <form [formGroup]="recuperarForm" (ngSubmit)="onSubmit()" class="recovery-form">
-      
+    <form [formGroup]="recuperarForm" (ngSubmit)="onSubmit()"
+      class="recovery-form">
+
       <!-- Campo de Correo Electrónico -->
       <div class="input-group-custom">
         <label class="input-label">Correo Electrónico</label>
-        <input 
-          type="email" 
+        <input
+          type="email"
           class="input"
           formControlName="email"
           placeholder="Ingresa tu correo electrónico"
           [class.input-error]="recuperarForm.get('email')?.invalid && recuperarForm.get('email')?.touched">
-        <div class="error-message" *ngIf="recuperarForm.get('email')?.invalid && recuperarForm.get('email')?.touched">
-          <span *ngIf="recuperarForm.get('email')?.errors?.['required']">El correo electrónico es requerido</span>
-          <span *ngIf="recuperarForm.get('email')?.errors?.['email']">Ingresa un correo electrónico válido</span>
+        <div class="error-message"
+          *ngIf="recuperarForm.get('email')?.invalid && recuperarForm.get('email')?.touched">
+          <span *ngIf="recuperarForm.get('email')?.errors?.['required']">El
+            correo electrónico es requerido</span>
+          <span *ngIf="recuperarForm.get('email')?.errors?.['email']">Ingresa un
+            correo electrónico válido</span>
         </div>
       </div>
 
       <!-- Botón Enviar Código -->
-      <button 
-        type="submit" 
+      <button
+        type="submit"
         class="btn primary-btn send-code-btn"
         [disabled]="recuperarForm.get('email')?.invalid || isLoadingSendCode">
         <span *ngIf="!isLoadingSendCode">Enviar Código</span>
@@ -63,21 +69,25 @@
 
       <!-- Campo de Código (aparece después de enviar) -->
       <div class="input-group-custom" *ngIf="showCodeField">
-        <input 
-          type="text" 
+        <input
+          type="text"
           class="input code-input"
           formControlName="codigo"
           placeholder="Escribe tu código"
           maxlength="6"
+          style="text-transform: uppercase;"
           [class.input-error]="recuperarForm.get('codigo')?.invalid && recuperarForm.get('codigo')?.touched">
-        <div class="error-message" *ngIf="recuperarForm.get('codigo')?.invalid && recuperarForm.get('codigo')?.touched">
-          <span *ngIf="recuperarForm.get('codigo')?.errors?.['required']">El código es requerido</span>
-          <span *ngIf="recuperarForm.get('codigo')?.errors?.['pattern']">El código debe tener 6 dígitos</span>
+        <div class="error-message"
+          *ngIf="recuperarForm.get('codigo')?.invalid && recuperarForm.get('codigo')?.touched">
+          <span *ngIf="recuperarForm.get('codigo')?.errors?.['required']">El
+            código es requerido</span>
+          <span *ngIf="recuperarForm.get('codigo')?.errors?.['pattern']">El
+            código debe tener 6 caracteres (letras y números)</span>
         </div>
       </div>
 
       <!-- Botón Verificar (aparece después de enviar código) -->
-      <button 
+      <button
         type="button"
         class="btn primary-btn verify-btn"
         *ngIf="showCodeField"
@@ -111,7 +121,7 @@
       <!-- Enlace de registro -->
       <div class="register-section">
         <p class="register-text">
-          ¿No tienes una cuenta? 
+          ¿No tienes una cuenta?
           <a routerLink="/registro" class="register-link">Regístrate</a>
         </p>
       </div>

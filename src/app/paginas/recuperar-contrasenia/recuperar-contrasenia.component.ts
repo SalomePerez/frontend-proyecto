@@ -3,8 +3,9 @@ import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { Subject, takeUntil } from 'rxjs';
+import { UsuarioService, ApiError } from '../../servicios/usuario.service'; // Ajusta la ruta según tu estructura
 
-// Interfaces
+// Interfaces locales (puedes mantenerlas o usar las del servicio)
 export interface RecuperarPasswordRequest {
   email: string;
 }
@@ -50,8 +51,8 @@ export class RecuperarContraseniaComponent implements OnInit, OnDestroy {
 
   constructor(
     private formBuilder: FormBuilder,
-    private router: Router
-    // private authService: AuthService // Descomentar cuando tengas el servicio
+    private router: Router,
+    private usuarioService: UsuarioService // ← Inyección del servicio real
   ) {
     this.initializeForm();
   }
@@ -73,7 +74,7 @@ export class RecuperarContraseniaComponent implements OnInit, OnDestroy {
       ]],
       codigo: ['', [
         Validators.required,
-        Validators.pattern(/^\d{6}$/) // Exactamente 6 dígitos
+        Validators.pattern(/^[A-Za-z0-9]{6}$/) // Exactamente 6 caracteres alfanuméricos
       ]]
     });
 
@@ -109,76 +110,47 @@ export class RecuperarContraseniaComponent implements OnInit, OnDestroy {
     this.clearMessages();
 
     const email = this.recuperarForm.get('email')?.value.trim();
-    const requestData: RecuperarPasswordRequest = { email };
 
-    // Simular llamada al servicio
-    this.simulateSendCode(requestData);
+    console.log('Enviando código de recuperación para:', email);
 
-    // Implementación real:
-    /*
-    this.authService.enviarCodigoRecuperacion(requestData)
+    // Llamada REAL al servicio backend
+    this.usuarioService.enviarCodigoRecuperacion(email)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (response: RecuperarPasswordResponse) => {
-          this.handleSendCodeSuccess(response);
+        next: (response) => {
+          this.handleSendCodeSuccess(response, email);
         },
-        error: (error) => {
+        error: (error: ApiError) => {
           this.handleSendCodeError(error);
         }
       });
-    */
   }
 
-  private simulateSendCode(requestData: RecuperarPasswordRequest): void {
-    // Simulación para desarrollo
-    setTimeout(() => {
-      // Simular diferentes escenarios
-      if (requestData.email === 'test@error.com') {
-        this.handleSendCodeError({
-          error: { message: 'Email no encontrado en el sistema' }
-        });
-      } else {
-        const mockResponse: RecuperarPasswordResponse = {
-          success: true,
-          message: 'Código enviado exitosamente',
-          codigoEnviado: true
-        };
-        this.handleSendCodeSuccess(mockResponse);
-      }
-    }, 2000);
-  }
-
-  private handleSendCodeSuccess(response: RecuperarPasswordResponse): void {
+  private handleSendCodeSuccess(response: any, email: string): void {
     this.isLoadingSendCode = false;
-    this.emailEnviado = this.recuperarForm.get('email')?.value;
+    this.emailEnviado = email;
     
     // Mostrar campo de código y habilitar validación
     this.showCodeField = true;
     this.recuperarForm.get('codigo')?.setValidators([
       Validators.required,
-      Validators.pattern(/^\d{6}$/)
+      Validators.pattern(/^[A-Za-z0-9]{6}$/) // 6 caracteres alfanuméricos
     ]);
     this.recuperarForm.get('codigo')?.updateValueAndValidity();
 
-    this.successMessage = 'Código enviado a tu correo electrónico';
+    // Mostrar mensajes de éxito del backend
+    this.successMessage = response.mensaje || 'Código enviado a tu correo electrónico';
     this.infoMessage = 'Revisa tu bandeja de entrada y spam';
 
     // Deshabilitar el campo de email
     this.recuperarForm.get('email')?.disable();
   }
 
-  private handleSendCodeError(error: any): void {
+  private handleSendCodeError(error: ApiError): void {
     this.isLoadingSendCode = false;
+    this.errorMessage = error.message;
     
-    if (error.status === 404) {
-      this.errorMessage = 'No se encontró una cuenta con este correo electrónico';
-    } else if (error.status === 429) {
-      this.errorMessage = 'Has excedido el límite de intentos. Intenta más tarde';
-    } else if (error.status === 0) {
-      this.errorMessage = 'Error de conexión. Verifica tu conexión a internet';
-    } else {
-      this.errorMessage = error.error?.message || 'Error al enviar el código. Inténtalo de nuevo';
-    }
+    console.error('Error al enviar código:', error);
   }
 
   onVerifyCode(): void {
@@ -193,45 +165,21 @@ export class RecuperarContraseniaComponent implements OnInit, OnDestroy {
     this.isLoadingVerify = true;
     this.clearMessages();
 
-    const verifyData: VerificarCodigoRequest = {
-      email: this.emailEnviado,
-      codigo: this.recuperarForm.get('codigo')?.value
-    };
-
-    // Simular verificación
-    this.simulateVerifyCode(verifyData);
-
-    // Implementación real:
-    /*
-    this.authService.verificarCodigoRecuperacion(verifyData)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (response) => {
-          this.handleVerifySuccess(response);
-        },
-        error: (error) => {
-          this.handleVerifyError(error);
-        }
-      });
-    */
+    // Para la verificación del código, simplemente validamos localmente y redirigimos
+    // El backend validará el código cuando se cambie la contraseña
+    const codigo = this.recuperarForm.get('codigo')?.value;
+    
+    console.log('Validando código localmente:', codigo);
+    
+    // Validación básica local (6 caracteres alfanuméricos)
+    if (codigo && codigo.length === 6 && /^[A-Za-z0-9]{6}$/.test(codigo)) {
+      this.handleVerifySuccess();
+    } else {
+      this.handleVerifyError({ message: 'Código inválido. Debe tener 6 caracteres alfanuméricos.' } as ApiError);
+    }
   }
 
-  private simulateVerifyCode(verifyData: VerificarCodigoRequest): void {
-    setTimeout(() => {
-      if (verifyData.codigo === '123456') {
-        this.handleVerifySuccess({
-          success: true,
-          message: 'Código verificado correctamente'
-        });
-      } else {
-        this.handleVerifyError({
-          error: { message: 'Código incorrecto' }
-        });
-      }
-    }, 1500);
-  }
-
-  private handleVerifySuccess(response: any): void {
+  private handleVerifySuccess(): void {
     this.isLoadingVerify = false;
     this.codigoVerificado = true;
     this.successMessage = 'Código verificado correctamente';
@@ -247,16 +195,9 @@ export class RecuperarContraseniaComponent implements OnInit, OnDestroy {
     }, 2000);
   }
 
-  private handleVerifyError(error: any): void {
+  private handleVerifyError(error: ApiError): void {
     this.isLoadingVerify = false;
-    
-    if (error.status === 400) {
-      this.errorMessage = 'Código incorrecto o expirado';
-    } else if (error.status === 429) {
-      this.errorMessage = 'Demasiados intentos fallidos. Solicita un nuevo código';
-    } else {
-      this.errorMessage = error.error?.message || 'Error al verificar el código';
-    }
+    this.errorMessage = error.message;
   }
 
   // Métodos auxiliares
@@ -268,12 +209,26 @@ export class RecuperarContraseniaComponent implements OnInit, OnDestroy {
     this.recuperarForm.get('codigo')?.markAsTouched();
   }
 
-  // Método para reenviar código
+  // Método para reenviar código (actualizado para usar el servicio real)
   onResendCode(): void {
-    if (!this.isLoadingSendCode) {
+    if (!this.isLoadingSendCode && this.emailEnviado) {
       this.recuperarForm.get('codigo')?.reset();
       this.clearMessages();
-      this.sendRecoveryCode();
+      
+      console.log('Reenviando código para:', this.emailEnviado);
+      
+      // Usar el servicio real para reenviar código
+      this.usuarioService.enviarCodigoRecuperacion(this.emailEnviado)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: (response) => {
+            this.successMessage = 'Código reenviado correctamente';
+            this.infoMessage = 'Revisa tu bandeja de entrada y spam';
+          },
+          error: (error: ApiError) => {
+            this.errorMessage = error.message;
+          }
+        });
     }
   }
 
@@ -289,7 +244,7 @@ export class RecuperarContraseniaComponent implements OnInit, OnDestroy {
     this.clearMessages();
   }
 
-  // Getters para el template
+  // Getters para el template (mantienen tu lógica original)
   get emailControl() {
     return this.recuperarForm.get('email');
   }

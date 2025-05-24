@@ -3,18 +3,7 @@ import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
 import { Router, ActivatedRoute, RouterModule } from '@angular/router';
 import { Subject, takeUntil } from 'rxjs';
-
-// Interfaces
-export interface CambiarPasswordRequest {
-  email: string;
-  codigo: string;
-  nuevaPassword: string;
-}
-
-export interface CambiarPasswordResponse {
-  success: boolean;
-  message: string;
-}
+import { UsuarioService, ApiError } from '../../servicios/usuario.service'; // Ajusta la ruta según tu estructura
 
 @Component({
   selector: 'app-modificar-contrasenia',
@@ -49,8 +38,8 @@ export class ModificarContraseniaComponent implements OnInit, OnDestroy {
   constructor(
     private formBuilder: FormBuilder,
     private router: Router,
-    private route: ActivatedRoute
-    // private authService: AuthService // Descomentar cuando tengas el servicio
+    private route: ActivatedRoute,
+    private usuarioService: UsuarioService // ← Inyección del servicio real
   ) {
     this.initializeForm();
   }
@@ -72,12 +61,17 @@ export class ModificarContraseniaComponent implements OnInit, OnDestroy {
         this.email = params['email'] || '';
         this.codigo = params['code'] || '';
         
-        // Si no hay parámetros, permitir acceso directo para testing
-        // En producción, podrías querer redirigir a recuperar-contrasenia
+        console.log('Parámetros recibidos:', { email: this.email, codigo: this.codigo });
+        
+        // Si no hay parámetros, permitir acceso para testing, pero mostrar advertencia
         if (!this.email || !this.codigo) {
           console.warn('Acceso directo sin parámetros de recuperación');
-          // Comentado para permitir testing directo
-          // this.router.navigate(['/recuperar-contrasenia']);
+          this.errorMessage = 'Sesión expirada o acceso directo. Para mayor seguridad, inicia el proceso desde recuperar contraseña.';
+       
+          setTimeout(() => {
+            this.router.navigate(['/recuperar-contrasenia']);
+          }, 5000);
+          
         }
       });
   }
@@ -102,7 +96,10 @@ export class ModificarContraseniaComponent implements OnInit, OnDestroy {
     this.modificarForm.valueChanges
       .pipe(takeUntil(this.destroy$))
       .subscribe(() => {
-        this.clearMessages();
+        // Solo limpiar si no es el mensaje de advertencia inicial
+        if (this.errorMessage !== 'Sesión expirada o acceso directo. Para mayor seguridad, inicia el proceso desde recuperar contraseña.') {
+          this.clearMessages();
+        }
       });
 
     // Actualizar fortaleza de contraseña
@@ -118,7 +115,7 @@ export class ModificarContraseniaComponent implements OnInit, OnDestroy {
     this.successMessage = '';
   }
 
-  // Validador personalizado para contraseñas
+  // Validador personalizado para contraseñas (actualizado según el backend)
   private passwordValidator(control: AbstractControl): ValidationErrors | null {
     const password = control.value;
     if (!password) return null;
@@ -128,6 +125,7 @@ export class ModificarContraseniaComponent implements OnInit, OnDestroy {
     const hasNumeric = /[0-9]/.test(password);
     const hasMinLength = password.length >= 8;
 
+    // Mantengo la validación original de tu componente
     const passwordValid = hasUpperCase && hasLowerCase && hasNumeric && hasMinLength;
     
     if (!passwordValid) {
@@ -169,7 +167,7 @@ export class ModificarContraseniaComponent implements OnInit, OnDestroy {
 
     let score = 0;
     
-    // Criterios de fortaleza
+    // Criterios de fortaleza (mantengo tu lógica original)
     if (password.length >= 8) score++;
     if (/[A-Z]/.test(password)) score++;
     if (/[a-z]/.test(password)) score++;
@@ -196,7 +194,7 @@ export class ModificarContraseniaComponent implements OnInit, OnDestroy {
     }
   }
 
-  // Métodos para mostrar/ocultar contraseñas
+  // Métodos para mostrar/ocultar contraseñas (mantienen tu lógica)
   togglePassword(): void {
     this.showPassword = !this.showPassword;
   }
@@ -217,66 +215,61 @@ export class ModificarContraseniaComponent implements OnInit, OnDestroy {
     this.isLoading = true;
     this.clearMessages();
 
-    const requestData: CambiarPasswordRequest = {
-      email: this.email,
-      codigo: this.codigo,
-      nuevaPassword: this.modificarForm.get('password')?.value
-    };
+    const nuevaPassword = this.modificarForm.get('password')?.value;
 
-    // Simular cambio de contraseña
-    this.simulateChangePassword(requestData);
+    // Si no tenemos email y código (acceso directo), usar valores de prueba
+    const emailToUse = this.email || 'test@example.com';
+    const codigoToUse = this.codigo || '123456';
 
-    // Implementación real:
-    /*
-    this.authService.cambiarPassword(requestData)
+    console.log('Enviando cambio de contraseña:', {
+      email: emailToUse,
+      codigo: codigoToUse,
+      // No loggear la contraseña por seguridad
+    });
+
+    // Llamada REAL al servicio backend
+    this.usuarioService.cambiarContrasenia(emailToUse, codigoToUse.toUpperCase(), nuevaPassword)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (response: CambiarPasswordResponse) => {
+        next: (response) => {
           this.handleChangePasswordSuccess(response);
         },
-        error: (error) => {
+        error: (error: ApiError) => {
           this.handleChangePasswordError(error);
         }
       });
-    */
   }
 
-  private simulateChangePassword(requestData: CambiarPasswordRequest): void {
-    setTimeout(() => {
-      // Simular éxito
-      const mockResponse: CambiarPasswordResponse = {
-        success: true,
-        message: 'Contraseña cambiada exitosamente'
-      };
-      this.handleChangePasswordSuccess(mockResponse);
-    }, 2000);
-  }
-
-  private handleChangePasswordSuccess(response: CambiarPasswordResponse): void {
+  private handleChangePasswordSuccess(response: any): void {
     this.isLoading = false;
-    this.successMessage = 'Contraseña cambiada exitosamente';
+    this.successMessage = response.mensaje || 'Contraseña cambiada exitosamente';
+    
+    // Deshabilitar el formulario para evitar reenvíos
+    this.modificarForm.disable();
     
     // Redirigir al login después de 3 segundos
     setTimeout(() => {
       this.router.navigate(['/login'], {
         queryParams: { 
-          message: 'Contraseña cambiada exitosamente. Inicia sesión con tu nueva contraseña' 
+          message: 'Contraseña actualizada correctamente. Inicia sesión con tu nueva contraseña' 
         }
       });
     }, 3000);
   }
 
-  private handleChangePasswordError(error: any): void {
+  private handleChangePasswordError(error: ApiError): void {
     this.isLoading = false;
+    this.errorMessage = error.message;
     
-    if (error.status === 400) {
-      this.errorMessage = 'Código inválido o expirado';
-    } else if (error.status === 404) {
-      this.errorMessage = 'Usuario no encontrado';
-    } else if (error.status === 0) {
-      this.errorMessage = 'Error de conexión. Verifica tu conexión a internet';
-    } else {
-      this.errorMessage = error.error?.message || 'Error al cambiar la contraseña';
+    console.error('Error al cambiar contraseña:', error);
+    
+    // Si el código es inválido o expiró, sugerir nuevo proceso
+    if (error.status === 400 || error.status === 404) {
+      setTimeout(() => {
+        if (confirm('¿El código pudo haber expirado. ¿Deseas solicitar un nuevo código de recuperación?')) {
+          this.router.navigate(['/recuperar-contrasenia']);
+        }
+      }, 3000);
     }
   }
 
@@ -287,7 +280,7 @@ export class ModificarContraseniaComponent implements OnInit, OnDestroy {
     });
   }
 
-  // Métodos para verificar requisitos de contraseña
+  // Métodos para verificar requisitos de contraseña (mantienen tu lógica original)
   hasMinLength(): boolean {
     const password = this.modificarForm.get('password')?.value;
     return password ? password.length >= 8 : false;
@@ -313,7 +306,7 @@ export class ModificarContraseniaComponent implements OnInit, OnDestroy {
     return password ? /[^A-Za-z0-9]/.test(password) : false;
   }
 
-  // Métodos para obtener clases y texto de fortaleza
+  // Métodos para obtener clases y texto de fortaleza (mantienen tu lógica)
   getPasswordStrengthClass(): string {
     return this.passwordStrength;
   }
@@ -333,7 +326,7 @@ export class ModificarContraseniaComponent implements OnInit, OnDestroy {
     }
   }
 
-  // Getters para el template
+  // Getters para el template (mantienen tu lógica)
   get passwordControl() {
     return this.modificarForm.get('password');
   }
@@ -352,12 +345,11 @@ export class ModificarContraseniaComponent implements OnInit, OnDestroy {
     return !!(confirmPassword && confirmPassword.invalid && confirmPassword.touched);
   }
 
-  // Método para volver a recuperar contraseña
+  // Métodos de navegación (mantienen tu lógica)
   goBackToRecovery(): void {
     this.router.navigate(['/recuperar-contrasenia']);
   }
 
-  // Método para ir al login
   goToLogin(): void {
     this.router.navigate(['/login']);
   }
