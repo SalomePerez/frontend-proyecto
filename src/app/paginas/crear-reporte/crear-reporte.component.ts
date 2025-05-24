@@ -1,8 +1,10 @@
-import { Component, OnInit, OnDestroy, AfterViewInit } from '@angular/core';
+import { Component, OnInit, OnDestroy, AfterViewInit, NgZone, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { Subject } from 'rxjs';
+import { Subject, takeUntil } from 'rxjs';
+import mapboxgl from 'mapbox-gl';
+import { environment } from '../../../environments/environment';
 
 // Interfaces basadas en tu DTO
 interface UbicacionDTO {
@@ -31,9 +33,6 @@ interface Categoria {
   color: string;
   descripcion: string;
 }
-
-// Declaración para Google Maps
-declare let google: any;
 
 @Component({
   selector: 'app-crear-reporte',
@@ -71,7 +70,6 @@ export class CrearReporteComponent implements OnInit, OnDestroy, AfterViewInit {
   currentStep: number = 1;
   totalSteps: number = 5;
   isLoadingLocation: boolean = false;
-  showLocationSelector: boolean = false;
 
   // Datos
   categorias: Categoria[] = [];
@@ -79,34 +77,51 @@ export class CrearReporteComponent implements OnInit, OnDestroy, AfterViewInit {
   previewUrls: string[] = [];
   prioridadesDisponibles: Array<'baja' | 'media' | 'alta' | 'critica'> = ['baja', 'media', 'alta', 'critica'];
   
-  // Mapa
-  map: any = null;
-  marker: any = null;
+  // Mapbox
+  map: mapboxgl.Map | null = null;
+  marker: mapboxgl.Marker | null = null;
   isMapReady: boolean = false;
+  mapError: string = '';
+  private readonly MAPBOX_TOKEN = environment.mapboxToken;
 
   private destroy$ = new Subject<void>();
 
-  constructor(private router: Router) {
+  constructor(
+    private router: Router,
+    private ngZone: NgZone,
+    private cdr: ChangeDetectorRef
+  ) {
+    console.log('🏗️ Inicializando CrearReporteComponent...');
     this.initializeCategorias();
     this.loadUserData();
+    this.configureMapbox();
   }
 
   ngOnInit(): void {
+    console.log('🚀 ngOnInit - Detectando ubicación inicial...');
     this.detectarUbicacionActual();
   }
 
   ngAfterViewInit(): void {
-    // Inicializar mapa cuando se muestre el paso 4 (ubicación)
-    setTimeout(() => {
-      if (this.currentStep === 4) {
-        this.initializeMap();
-      }
-    }, 100);
+    console.log('🔄 ngAfterViewInit - Preparando para inicializar mapa si es necesario...');
+    // El mapa se inicializará cuando se llegue al paso 4
   }
 
   ngOnDestroy(): void {
+    console.log('💀 ngOnDestroy - Limpiando recursos...');
+    this.destroyMap();
     this.destroy$.next();
     this.destroy$.complete();
+  }
+
+  private configureMapbox(): void {
+    if (this.MAPBOX_TOKEN) {
+      mapboxgl.accessToken = this.MAPBOX_TOKEN;
+      console.log('✅ Token de Mapbox configurado');
+    } else {
+      console.error('❌ Token de Mapbox no encontrado en environment');
+      this.mapError = 'Token de Mapbox no configurado';
+    }
   }
 
   private initializeCategorias(): void {
@@ -148,13 +163,13 @@ export class CrearReporteComponent implements OnInit, OnDestroy, AfterViewInit {
       if (userData) {
         try {
           const user = JSON.parse(userData);
-          this.reporte.idUsuario = user.id || 'user-123'; // ID simulado
+          this.reporte.idUsuario = user.id || 'user-123';
         } catch (error) {
           console.warn('Error parsing user data:', error);
-          this.reporte.idUsuario = 'user-123'; // ID por defecto
+          this.reporte.idUsuario = 'user-123';
         }
       } else {
-        this.reporte.idUsuario = 'user-123'; // ID por defecto
+        this.reporte.idUsuario = 'user-123';
       }
     }
   }
@@ -167,7 +182,7 @@ export class CrearReporteComponent implements OnInit, OnDestroy, AfterViewInit {
         
         // Inicializar mapa cuando llegue al paso 4 (ubicación)
         if (this.currentStep === 4) {
-          setTimeout(() => this.initializeMap(), 100);
+          setTimeout(() => this.initializeMapbox(), 300);
         }
       }
     }
@@ -183,7 +198,7 @@ export class CrearReporteComponent implements OnInit, OnDestroy, AfterViewInit {
     if (step <= this.currentStep || this.validateStepsUpTo(step - 1)) {
       this.currentStep = step;
       if (step === 4) {
-        setTimeout(() => this.initializeMap(), 100);
+        setTimeout(() => this.initializeMapbox(), 300);
       }
     }
   }
@@ -229,8 +244,8 @@ export class CrearReporteComponent implements OnInit, OnDestroy, AfterViewInit {
         }
         break;
 
-      case 5: // Fotos (opcional pero si hay, debe tener al menos una)
-        // Las fotos son opcionales según tu diseño de la imagen
+      case 5: // Fotos (opcional)
+        // Las fotos son opcionales
         break;
     }
 
@@ -253,7 +268,6 @@ export class CrearReporteComponent implements OnInit, OnDestroy, AfterViewInit {
   // MANEJO DE PRIORIDAD Y CONFIGURACIONES
   toggleImportante(): void {
     this.reporte.esImportante = !this.reporte.esImportante;
-    // Si es importante, automáticamente establecer prioridad alta
     if (this.reporte.esImportante && this.reporte.prioridad === 'baja') {
       this.reporte.prioridad = 'alta';
     }
@@ -261,43 +275,28 @@ export class CrearReporteComponent implements OnInit, OnDestroy, AfterViewInit {
 
   setPrioridad(prioridad: 'baja' | 'media' | 'alta' | 'critica'): void {
     this.reporte.prioridad = prioridad;
-    // Si es crítica, automáticamente marcar como importante
     if (prioridad === 'critica') {
       this.reporte.esImportante = true;
     }
   }
 
-  toggleAnonimo(): void {
-    this.reporte.esAnonimo = !this.reporte.esAnonimo;
-  }
-
   getPrioridadColor(prioridad: string): string {
     switch (prioridad) {
-      case 'baja':
-        return '#10b981';
-      case 'media':
-        return '#f59e0b';
-      case 'alta':
-        return '#ef4444';
-      case 'critica':
-        return '#dc2626';
-      default:
-        return '#6b7280';
+      case 'baja': return '#10b981';
+      case 'media': return '#f59e0b';
+      case 'alta': return '#ef4444';
+      case 'critica': return '#dc2626';
+      default: return '#6b7280';
     }
   }
 
   getPrioridadIcon(prioridad: string): string {
     switch (prioridad) {
-      case 'baja':
-        return 'bi bi-flag';
-      case 'media':
-        return 'bi bi-flag-fill';
-      case 'alta':
-        return 'bi bi-exclamation-triangle';
-      case 'critica':
-        return 'bi bi-exclamation-triangle-fill';
-      default:
-        return 'bi bi-flag';
+      case 'baja': return 'bi bi-flag';
+      case 'media': return 'bi bi-flag-fill';
+      case 'alta': return 'bi bi-exclamation-triangle';
+      case 'critica': return 'bi bi-exclamation-triangle-fill';
+      default: return 'bi bi-flag';
     }
   }
 
@@ -315,6 +314,7 @@ export class CrearReporteComponent implements OnInit, OnDestroy, AfterViewInit {
         return { color: '#6b7280', icon: 'bi bi-question-circle', texto: 'Desconocido' };
     }
   }
+
   selectCategoria(categoria: Categoria): void {
     this.reporte.categoria = categoria.id;
   }
@@ -323,157 +323,289 @@ export class CrearReporteComponent implements OnInit, OnDestroy, AfterViewInit {
     return this.categorias.find(c => c.id === this.reporte.categoria);
   }
 
-  // MANEJO DE UBICACIÓN
+  // MANEJO DE UBICACIÓN CON MAPBOX
   private detectarUbicacionActual(): void {
+    console.log('📍 Detectando ubicación actual...');
     this.isLoadingLocation = true;
     
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
+          console.log('✅ Ubicación detectada:', position.coords);
           this.reporte.ubicacion.latitud = position.coords.latitude;
           this.reporte.ubicacion.longitud = position.coords.longitude;
           this.obtenerDireccionDeLatLng(position.coords.latitude, position.coords.longitude);
           this.isLoadingLocation = false;
+          this.cdr.detectChanges();
         },
         (error) => {
-          console.error('Error obteniendo ubicación:', error);
-          // Ubicación por defecto (Bogotá)
-          this.reporte.ubicacion.latitud = 4.6097;
-          this.reporte.ubicacion.longitud = -74.0817;
-          this.reporte.ubicacion.direccion = 'Bogotá, Colombia';
+          console.error('❌ Error obteniendo ubicación:', error);
+          // Ubicación por defecto (Pereira, Colombia)
+          this.reporte.ubicacion.latitud = 4.8143;
+          this.reporte.ubicacion.longitud = -75.6946;
+          this.reporte.ubicacion.direccion = 'Pereira, Colombia (Ubicación por defecto)';
           this.isLoadingLocation = false;
+          this.cdr.detectChanges();
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 300000
         }
       );
     } else {
-      // Ubicación por defecto
-      this.reporte.ubicacion.latitud = 4.6097;
-      this.reporte.ubicacion.longitud = -74.0817;
-      this.reporte.ubicacion.direccion = 'Bogotá, Colombia';
+      console.warn('⚠️ Geolocalización no disponible');
+      this.reporte.ubicacion.latitud = 4.8143;
+      this.reporte.ubicacion.longitud = -75.6946;
+      this.reporte.ubicacion.direccion = 'Pereira, Colombia (Ubicación por defecto)';
       this.isLoadingLocation = false;
+      this.cdr.detectChanges();
     }
   }
 
-  private obtenerDireccionDeLatLng(lat: number, lng: number): void {
-    if (typeof google !== 'undefined' && google.maps && google.maps.Geocoder) {
-      const geocoder = new google.maps.Geocoder();
-      geocoder.geocode(
-        { location: { lat: lat, lng: lng } },
-        (results: any, status: any) => {
-          if (status === 'OK' && results[0]) {
-            this.reporte.ubicacion.direccion = results[0].formatted_address;
-          } else {
-            this.reporte.ubicacion.direccion = `${lat}, ${lng}`;
-          }
-        }
+  private async obtenerDireccionDeLatLng(lat: number, lng: number): Promise<void> {
+    try {
+      console.log(`🔍 Obteniendo dirección para: ${lat}, ${lng}`);
+      
+      // Usar Mapbox Geocoding API para obtener la dirección
+      const response = await fetch(
+        `https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?access_token=${this.MAPBOX_TOKEN}&language=es`
       );
-    } else {
-      this.reporte.ubicacion.direccion = `${lat}, ${lng}`;
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.features && data.features.length > 0) {
+          this.reporte.ubicacion.direccion = data.features[0].place_name;
+          console.log('✅ Dirección obtenida:', this.reporte.ubicacion.direccion);
+        } else {
+          this.reporte.ubicacion.direccion = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+        }
+      } else {
+        console.warn('⚠️ Error en geocoding, usando coordenadas');
+        this.reporte.ubicacion.direccion = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+      }
+    } catch (error) {
+      console.error('❌ Error en geocoding:', error);
+      this.reporte.ubicacion.direccion = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+    } finally {
+      this.cdr.detectChanges();
     }
   }
 
-  private initializeMap(): void {
+  private async initializeMapbox(): Promise<void> {
+    console.log('🗺️ Inicializando Mapbox para crear reporte...');
+    
+    if (!this.MAPBOX_TOKEN) {
+      this.mapError = 'Token de Mapbox no configurado';
+      console.error('❌ Token de Mapbox no disponible');
+      return;
+    }
+
     const mapElement = document.getElementById('map-container');
     if (!mapElement) {
-      console.warn('Elemento del mapa no encontrado');
+      console.warn('⚠️ Elemento del mapa no encontrado, reintentando...');
+      setTimeout(() => this.initializeMapbox(), 500);
       return;
     }
     
     if (this.map) {
-      console.log('Mapa ya inicializado');
-      return;
-    }
-
-    // Esperar un poco más si Google Maps no está listo
-    if (typeof google === 'undefined' || !google.maps) {
-      console.log('Google Maps no disponible, reintentando...');
-      setTimeout(() => this.initializeMap(), 500);
+      console.log('✅ Mapa ya inicializado');
       return;
     }
 
     try {
-      this.map = new google.maps.Map(mapElement, {
-        center: { 
-          lat: this.reporte.ubicacion.latitud, 
-          lng: this.reporte.ubicacion.longitud 
-        },
-        zoom: 15,
-        mapTypeId: google.maps.MapTypeId.ROADMAP,
-        styles: [
-          {
-            featureType: 'poi',
-            elementType: 'labels',
-            stylers: [{ visibility: 'off' }]
-          }
-        ]
-      });
+      // Verificar dimensiones del contenedor
+      const rect = mapElement.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) {
+        console.warn('⚠️ Contenedor sin dimensiones, aplicando estilos...');
+        mapElement.style.width = '100%';
+        mapElement.style.height = '400px';
+        mapElement.style.minHeight = '400px';
+        await new Promise(resolve => setTimeout(resolve, 200));
+      }
 
-      this.marker = new google.maps.Marker({
-        position: { 
-          lat: this.reporte.ubicacion.latitud, 
-          lng: this.reporte.ubicacion.longitud 
-        },
-        map: this.map,
-        draggable: true,
-        title: 'Ubicación del reporte',
-        icon: {
-          path: google.maps.SymbolPath.CIRCLE,
-          scale: 10,
-          fillColor: '#ef4444',
-          fillOpacity: 1,
-          strokeColor: '#ffffff',
-          strokeWeight: 3
-        }
-      });
-
-      // Actualizar ubicación cuando se mueva el marcador
-      this.marker.addListener('dragend', () => {
-        const position = this.marker.getPosition();
-        this.reporte.ubicacion.latitud = position.lat();
-        this.reporte.ubicacion.longitud = position.lng();
-        this.obtenerDireccionDeLatLng(position.lat(), position.lng());
-      });
-
-      // Permitir hacer clic en el mapa para mover el marcador
-      this.map.addListener('click', (event: any) => {
-        this.marker.setPosition(event.latLng);
-        this.reporte.ubicacion.latitud = event.latLng.lat();
-        this.reporte.ubicacion.longitud = event.latLng.lng();
-        this.obtenerDireccionDeLatLng(event.latLng.lat(), event.latLng.lng());
-      });
-
-      this.isMapReady = true;
-      console.log('Mapa inicializado correctamente');
+      console.log('📦 Creando instancia de mapa Mapbox...');
       
+      this.map = new mapboxgl.Map({
+        container: 'map-container',
+        style: 'mapbox://styles/mapbox/streets-v12',
+        center: [this.reporte.ubicacion.longitud, this.reporte.ubicacion.latitud],
+        zoom: 15,
+        attributionControl: false
+      });
+
+      // Eventos del mapa
+      this.map.on('load', () => {
+        console.log('✅ Mapa Mapbox cargado para crear reporte');
+        this.agregarControlesMapa();
+        this.crearMarcadorInteractivo();
+        this.isMapReady = true;
+        this.cdr.detectChanges();
+      });
+
+      this.map.on('error', (error) => {
+        console.error('❌ Error en mapa Mapbox:', error);
+        this.mapError = 'Error cargando el mapa. Verifica tu conexión.';
+        this.cdr.detectChanges();
+      });
+
+      // Configurar clicks en el mapa
+      this.map.on('click', (e) => {
+        console.log('👆 Click en mapa detectado:', e.lngLat);
+        this.actualizarUbicacion(e.lngLat.lat, e.lngLat.lng);
+      });
+
     } catch (error) {
-      console.error('Error inicializando mapa:', error);
+      console.error('❌ Error inicializando Mapbox:', error);
+      this.mapError = 'Error inicializando el mapa';
+      this.cdr.detectChanges();
     }
   }
 
-  detectarUbicacionActualEnMapa(): void {
-    this.detectarUbicacionActual();
-    setTimeout(() => {
-      if (this.map && this.marker) {
-        const newPosition = { 
-          lat: this.reporte.ubicacion.latitud, 
-          lng: this.reporte.ubicacion.longitud 
-        };
-        this.map.setCenter(newPosition);
-        this.marker.setPosition(newPosition);
-      } else {
-        // Si el mapa no existe, lo inicializamos
-        this.initializeMap();
-      }
-    }, 1000);
+  private agregarControlesMapa(): void {
+    if (!this.map) return;
+
+    try {
+      // Control de navegación
+      this.map.addControl(new mapboxgl.NavigationControl(), 'top-right');
+      
+      // Control de geolocalización
+      const geolocateControl = new mapboxgl.GeolocateControl({
+        positionOptions: {
+          enableHighAccuracy: true
+        },
+        trackUserLocation: false,
+        showUserHeading: false
+      });
+      
+      this.map.addControl(geolocateControl, 'top-right');
+
+      // Listener para el control de geolocalización
+      geolocateControl.on('geolocate', (e: any) => {
+        console.log('📍 Geolocalización activada:', e.coords);
+        this.actualizarUbicacion(e.coords.latitude, e.coords.longitude);
+      });
+
+      console.log('✅ Controles de mapa agregados');
+    } catch (error) {
+      console.error('❌ Error agregando controles:', error);
+    }
   }
 
-  // Método para forzar inicialización del mapa
+  private crearMarcadorInteractivo(): void {
+    if (!this.map) return;
+
+    try {
+      // Crear marcador draggable
+      this.marker = new mapboxgl.Marker({
+        color: '#ef4444',
+        draggable: true,
+        scale: 1.2
+      })
+      .setLngLat([this.reporte.ubicacion.longitud, this.reporte.ubicacion.latitud])
+      .addTo(this.map);
+
+      // Listener para cuando se mueva el marcador
+      this.marker.on('dragend', () => {
+        if (this.marker) {
+          const lngLat = this.marker.getLngLat();
+          console.log('🔄 Marcador movido a:', lngLat);
+          this.actualizarUbicacion(lngLat.lat, lngLat.lng);
+        }
+      });
+
+      console.log('✅ Marcador interactivo creado');
+    } catch (error) {
+      console.error('❌ Error creando marcador:', error);
+    }
+  }
+
+  private actualizarUbicacion(lat: number, lng: number): void {
+    console.log(`📍 Actualizando ubicación a: ${lat}, ${lng}`);
+    
+    // Actualizar datos del reporte
+    this.reporte.ubicacion.latitud = lat;
+    this.reporte.ubicacion.longitud = lng;
+    
+    // Mover marcador si existe
+    if (this.marker) {
+      this.marker.setLngLat([lng, lat]);
+    }
+    
+    // Obtener dirección
+    this.obtenerDireccionDeLatLng(lat, lng);
+  }
+
+  detectarUbicacionActualEnMapa(): void {
+    console.log('🎯 Detectando ubicación actual en mapa...');
+    this.isLoadingLocation = true;
+    
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const lat = position.coords.latitude;
+          const lng = position.coords.longitude;
+          
+          console.log('✅ Nueva ubicación:', lat, lng);
+          
+          this.actualizarUbicacion(lat, lng);
+          
+          // Centrar mapa en nueva ubicación
+          if (this.map) {
+            this.map.flyTo({
+              center: [lng, lat],
+              zoom: 16,
+              duration: 1500
+            });
+          }
+          
+          this.isLoadingLocation = false;
+          this.cdr.detectChanges();
+        },
+        (error) => {
+          console.error('❌ Error detectando ubicación:', error);
+          this.isLoadingLocation = false;
+          this.cdr.detectChanges();
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0
+        }
+      );
+    } else {
+      console.warn('⚠️ Geolocalización no disponible');
+      this.isLoadingLocation = false;
+      this.cdr.detectChanges();
+    }
+  }
+
   forceMapInitialization(): void {
-    if (this.currentStep === 4) {
-      this.map = null; // Reset
-      this.marker = null; // Reset
-      setTimeout(() => {
-        this.initializeMap();
-      }, 100);
+    console.log('🔄 Forzando reinicialización del mapa...');
+    this.destroyMap();
+    this.mapError = '';
+    setTimeout(() => {
+      this.initializeMapbox();
+    }, 300);
+  }
+
+  private destroyMap(): void {
+    if (this.map) {
+      console.log('🗑️ Destruyendo mapa...');
+      try {
+        if (this.marker) {
+          this.marker.remove();
+          this.marker = null;
+        }
+        this.map.remove();
+        this.map = null;
+        this.isMapReady = false;
+      } catch (error) {
+        console.error('❌ Error destruyendo mapa:', error);
+        this.map = null;
+        this.marker = null;
+        this.isMapReady = false;
+      }
     }
   }
 
@@ -482,15 +614,18 @@ export class CrearReporteComponent implements OnInit, OnDestroy, AfterViewInit {
     const files = Array.from(event.target.files) as File[];
     
     files.forEach(file => {
-      if (file.type.startsWith('image/')) {
+      if (file.type.startsWith('image/') && file.size <= 5 * 1024 * 1024) { // 5MB max
         this.fotosSeleccionadas.push(file);
         
         // Crear preview
         const reader = new FileReader();
         reader.onload = (e: any) => {
           this.previewUrls.push(e.target.result);
+          this.cdr.detectChanges();
         };
         reader.readAsDataURL(file);
+      } else {
+        console.warn('⚠️ Archivo inválido o muy grande:', file.name);
       }
     });
   }
@@ -502,11 +637,20 @@ export class CrearReporteComponent implements OnInit, OnDestroy, AfterViewInit {
 
   // ENVÍO DEL FORMULARIO
   async submitReporte(): Promise<void> {
+    console.log('📤 Enviando reporte...');
+    
     if (!this.validateCurrentStep()) {
+      console.warn('⚠️ Validación fallida');
+      return;
+    }
+
+    if (!this.reporte.ubicacion.latitud || !this.reporte.ubicacion.longitud) {
+      this.formErrors.general = 'Debe seleccionar una ubicación válida';
       return;
     }
 
     this.isSubmitting = true;
+    this.formErrors = {};
 
     try {
       // Simular subida de fotos
@@ -518,30 +662,45 @@ export class CrearReporteComponent implements OnInit, OnDestroy, AfterViewInit {
       
       this.reporte.fotos = fotosUrls;
 
+      // Agregar timestamp
+      const reporteCompleto = {
+        ...this.reporte,
+        fechaCreacion: new Date().toISOString(),
+        ip: 'xxx.xxx.xxx.xxx', // En producción, obtener IP real
+        userAgent: navigator.userAgent
+      };
+
+      console.log('📋 Reporte a enviar:', reporteCompleto);
+
       // Simular envío al servidor
-      await this.enviarReporteAlServidor(this.reporte);
+      await this.enviarReporteAlServidor(reporteCompleto);
       
       this.showSuccessMessage = true;
       
       // Redirigir después de 3 segundos
       setTimeout(() => {
-        this.router.navigate(['/mis-reportes']);
+        this.router.navigate(['/principal-cliente']);
       }, 3000);
 
     } catch (error) {
-      console.error('Error enviando reporte:', error);
+      console.error('❌ Error enviando reporte:', error);
       this.formErrors.general = 'Error al enviar el reporte. Por favor, inténtalo de nuevo.';
     } finally {
       this.isSubmitting = false;
+      this.cdr.detectChanges();
     }
   }
 
-  private async enviarReporteAlServidor(reporte: CrearReporteDTO): Promise<void> {
+  private async enviarReporteAlServidor(reporte: any): Promise<void> {
     // Simular llamada HTTP
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       setTimeout(() => {
-        console.log('Reporte enviado:', reporte);
-        resolve();
+        if (Math.random() > 0.1) { // 90% de éxito
+          console.log('✅ Reporte enviado exitosamente:', reporte);
+          resolve();
+        } else {
+          reject(new Error('Error simulado del servidor'));
+        }
       }, 2000);
     });
   }
@@ -560,5 +719,17 @@ export class CrearReporteComponent implements OnInit, OnDestroy, AfterViewInit {
 
   isStepAccessible(step: number): boolean {
     return step <= this.currentStep || this.validateStepsUpTo(step - 1);
+  }
+
+  // Método para debugging
+  debugInfo(): void {
+    console.log('🐛 Estado del componente:', {
+      currentStep: this.currentStep,
+      mapReady: this.isMapReady,
+      mapError: this.mapError,
+      ubicacion: this.reporte.ubicacion,
+      hasMap: !!this.map,
+      hasMarker: !!this.marker
+    });
   }
 }
