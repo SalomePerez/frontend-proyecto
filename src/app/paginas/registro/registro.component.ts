@@ -45,7 +45,7 @@ export class RegistroComponent {
     const registroData: RegistroRequest = {
       nombre: this.registroForm.get('nombre')?.value.trim(),
       telefono: this.registroForm.get('telefono')?.value.trim(),
-      ciudad: this.registroForm.get('ciudad')?.value.trim(),
+      ciudad: this.registroForm.get('ciudad')?.value.trim().toUpperCase(),
       direccion: this.registroForm.get('direccion')?.value.trim(),
       email: this.registroForm.get('email')?.value.trim(),
       password: this.registroForm.get('password')?.value
