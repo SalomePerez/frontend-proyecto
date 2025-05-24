@@ -1,0 +1,181 @@
+<div class="principal-cliente-container">
+  <!-- Header/Navbar -->
+  <header class="navbar">
+    <div class="navbar-left">
+      <div class="logo-container">
+        <img src="assets/logo.png" alt="SegurApp Logo" class="logo">
+        <h1 class="app-name">SegurApp</h1>
+      </div>
+    </div>
+    
+    <div class="navbar-right">
+      <!-- Ícono de reportes -->
+      <button class="nav-icon-btn" [title]="'Mis Reportes'" (click)="goToMisReportes()">
+        <i class="bi bi-file-earmark-text"></i>
+      </button>
+      
+      <!-- Ícono de notificaciones -->
+      <button class="nav-icon-btn notification-btn" [title]="'Notificaciones'" (click)="toggleNotifications()">
+        <i class="bi bi-bell"></i>
+        <span class="notification-badge" *ngIf="notificationCount > 0">{{ notificationCount }}</span>
+      </button>
+      
+      <!-- Perfil de usuario -->
+      <div class="user-profile" (click)="toggleUserMenu()">
+        <div class="user-avatar">
+          <i class="bi bi-person-circle"></i>
+        </div>
+        <span class="user-name">{{ userName }}</span>
+        <i class="bi bi-chevron-down dropdown-arrow" [class.rotated]="showUserMenu"></i>
+      </div>
+      
+      <!-- Menú desplegable del usuario -->
+      <div class="user-dropdown" [class.show]="showUserMenu">
+        <div class="dropdown-item" (click)="goToProfile()">
+          <i class="bi bi-person"></i>
+          <span>Mi Perfil</span>
+        </div>
+        <div class="dropdown-item" (click)="goToSettings()">
+          <i class="bi bi-gear"></i>
+          <span>Configuración</span>
+        </div>
+        <div class="dropdown-divider"></div>
+        <div class="dropdown-item logout" (click)="logout()">
+          <i class="bi bi-box-arrow-right"></i>
+          <span>Cerrar Sesión</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Contenido principal -->
+  <main class="main-content">
+    <!-- Panel lateral izquierdo -->
+    <aside class="sidebar">
+      <div class="sidebar-content">
+        
+        <!-- Botón Reportes -->
+        <button class="sidebar-btn reportes-btn" (click)="goToReportes()">
+          <div class="btn-content">
+            <i class="bi bi-folder"></i>
+            <span>Reportes</span>
+          </div>
+        </button>
+
+        <!-- Botón Reportar -->
+        <button class="sidebar-btn reportar-btn" (click)="goToReportar()">
+          <div class="btn-content">
+            <i class="bi bi-plus-circle"></i>
+            <span>Reportar</span>
+          </div>
+        </button>
+
+        <!-- Botón Salir -->
+        <button class="sidebar-btn salir-btn" (click)="logout()">
+          <div class="btn-content">
+            <i class="bi bi-box-arrow-left"></i>
+            <span>Salir</span>
+          </div>
+        </button>
+      </div>
+    </aside>
+
+    <!-- Área del mapa -->
+    <section class="map-container">
+      <div class="map-header">
+        <h2 class="map-title">Mapa de Reportes - {{ userCity }}</h2>
+        <div class="map-controls">
+          <button class="control-btn" (click)="centerMap()" [title]="'Centrar en mi ubicación'">
+            <i class="bi bi-geo-alt"></i>
+          </button>
+          <button class="control-btn" (click)="toggleMapType()" [title]="'Cambiar vista del mapa'">
+            <i class="bi bi-layers"></i>
+          </button>
+          <button class="control-btn" (click)="refreshReports()" [title]="'Actualizar reportes'">
+            <i class="bi bi-arrow-clockwise"></i>
+          </button>
+        </div>
+      </div>
+      
+      <!-- Mapa de Google Maps -->
+      <div class="map-wrapper">
+        <div id="google-map" class="google-map"></div>
+        
+        <!-- Overlay de carga del mapa -->
+        <div class="map-loading" *ngIf="isLoadingMap">
+          <div class="loading-content">
+            <div class="spinner"></div>
+            <p>Cargando mapa...</p>
+          </div>
+        </div>
+        
+        <!-- Mensaje si no hay ubicación -->
+        <div class="no-location-message" *ngIf="!userLocation && !isLoadingMap">
+          <div class="message-content">
+            <i class="bi bi-geo-alt-fill"></i>
+            <h3>Ubicación no disponible</h3>
+            <p>Permite el acceso a tu ubicación para ver el mapa personalizado</p>
+            <button class="btn primary-btn" (click)="requestLocation()">
+              Permitir Ubicación
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Leyenda del mapa -->
+      <div class="map-legend">
+        <h4>Tipos de Reportes</h4>
+        <div class="legend-items">
+          <div class="legend-item">
+            <div class="legend-marker emergency"></div>
+            <span>Emergencia</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-marker security"></div>
+            <span>Seguridad</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-marker infrastructure"></div>
+            <span>Infraestructura</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-marker other"></div>
+            <span>Otros</span>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Panel de notificaciones (deslizable) -->
+  <div class="notifications-panel" [class.show]="showNotifications">
+    <div class="notifications-header">
+      <h3>Notificaciones</h3>
+      <button class="close-btn" (click)="closeNotifications()">
+        <i class="bi bi-x"></i>
+      </button>
+    </div>
+    <div class="notifications-content">
+      <div class="notification-item" *ngFor="let notification of notifications">
+        <div class="notification-icon" [class]="notification.type">
+          <i [class]="getNotificationIcon(notification.type)"></i>
+        </div>
+        <div class="notification-text">
+          <h4>{{ notification.title }}</h4>
+          <p>{{ notification.message }}</p>
+          <span class="notification-time">{{ notification.time }}</span>
+        </div>
+      </div>
+      
+      <div class="no-notifications" *ngIf="notifications.length === 0">
+        <i class="bi bi-bell-slash"></i>
+        <p>No tienes notificaciones nuevas</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Overlay para cerrar menús -->
+  <div class="overlay" 
+       [class.show]="showUserMenu || showNotifications" 
+       (click)="closeAllMenus()"></div>
+</div>

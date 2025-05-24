@@ -101,7 +101,7 @@
   font-weight: 400;
 }
 
-/* Sección derecha - Panel de registro exitoso */
+/* Sección derecha - Panel de éxito */
 .right-panel {
   flex: 1;
   background: #d5d9ff;
@@ -116,7 +116,7 @@
 
 .success-content {
   width: 100%;
-  max-width: 450px;
+  max-width: 400px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -125,7 +125,7 @@
 .form-title {
   font-size: 3rem;
   font-weight: 800;
-  margin-bottom: 1.5rem;
+  margin-bottom: 2rem;
   color: #111827;
   line-height: 1.1;
 }
@@ -133,22 +133,22 @@
 .success-message {
   font-size: 1.1rem;
   color: #374151;
-  margin-bottom: 2.5rem;
-  line-height: 1.6;
+  margin-bottom: 3rem;
+  line-height: 1.5;
   font-weight: 500;
-  max-width: 400px;
+  max-width: 350px;
 }
 
-/* Ícono de éxito con checkmark personalizado */
+/* Ícono de éxito - CHECKMARK PERSONALIZADO */
 .success-icon-container {
-  margin-bottom: 2.5rem;
+  margin-bottom: 3rem;
   animation: bounceIn 0.8s ease-out;
 }
 
 .success-icon {
-  width: 100px;
-  height: 100px;
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  width: 120px;
+  height: 120px;
+  background: linear-gradient(135deg, #2ecc71 0%, #2ecc71 100%);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -160,8 +160,8 @@
 .success-icon::before {
   content: '';
   position: absolute;
-  width: 120px;
-  height: 120px;
+  width: 140px;
+  height: 140px;
   border: 4px solid rgba(16, 185, 129, 0.2);
   border-radius: 50%;
   animation: pulse 2s infinite;
@@ -169,8 +169,8 @@
 
 /* SVG Checkmark personalizado */
 .checkmark {
-  width: 50px;
-  height: 50px;
+  width: 60px;
+  height: 60px;
 }
 
 .checkmark-circle {
@@ -201,249 +201,56 @@
   }
 }
 
-/* Información del usuario - MEJORADA */
-.user-info {
-  margin-bottom: 2rem;
-  text-align: center;
-  padding: 1.5rem;
-  background: rgba(255, 255, 255, 0.5);
-  border-radius: 1rem;
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.3);
+/* Animación alternativa con ícono de Bootstrap (fallback) */
+.success-icon i {
+  font-size: 3.5rem;
+  color: white;
+  font-weight: 900;
+  display: none; /* Oculto porque usamos SVG */
 }
 
-.user-email {
-  font-size: 1.1rem;
-  color: #4f46e5;
-  font-weight: 700;
-  margin-bottom: 0.75rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  background: rgba(79, 70, 229, 0.1);
-  padding: 0.75rem 1rem;
-  border-radius: 2rem;
-  border: 2px solid rgba(79, 70, 229, 0.2);
-}
-
-.user-email i {
-  font-size: 1.2rem;
-  color: #4f46e5;
-}
-
-.activation-text {
-  font-size: 0.95rem;
-  color: #374151;
-  margin: 0;
-  line-height: 1.5;
-  font-weight: 500;
-}
-
-/* Botón principal de activar cuenta - MEJORADO */
+/* Botón de redirección */
 .btn {
-  padding: 1rem 2rem;
+  width: 100%;
+  max-width: 300px;
+  padding: 0.875rem 1.5rem;
   font-weight: 700;
   border-radius: 2rem;
   cursor: pointer;
   border: none;
   transition: all 0.3s ease;
+  margin-bottom: 1.5rem;
   font-size: 1.1rem;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  text-decoration: none;
-  outline: none;
 }
 
 .primary-btn {
   background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
   color: white;
   box-shadow: 0 4px 14px rgba(79, 70, 229, 0.3);
-  width: 100%;
-  max-width: 280px;
-  margin-bottom: 2rem;
-  position: relative;
-  overflow: hidden;
 }
 
-.primary-btn:hover:not(:disabled) {
+.primary-btn:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(79, 70, 229, 0.4);
-  background: linear-gradient(135deg, #4338ca 0%, #6d28d9 100%);
 }
 
-.primary-btn:active {
-  transform: translateY(0);
-  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3);
-}
-
-.primary-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  transform: none;
-  background: #9ca3af;
-}
-
-.activate-btn {
+.login-redirect-btn {
   font-size: 1.2rem;
-  padding: 1.1rem 2.5rem;
-  font-weight: 800;
-  letter-spacing: 0.5px;
-}
-
-/* Efecto de ondas al hacer clic */
-.primary-btn::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 0;
-  height: 0;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.3);
-  transform: translate(-50%, -50%);
-  transition: width 0.6s, height 0.6s;
-}
-
-.primary-btn:active::before {
-  width: 300px;
-  height: 300px;
-}
-
-/* Estados específicos del botón */
-.activate-btn:focus {
-  outline: 3px solid rgba(79, 70, 229, 0.4);
-  outline-offset: 2px;
-}
-
-.activate-btn i {
-  font-size: 1.1rem;
-  transition: transform 0.3s ease;
-}
-
-.activate-btn:hover i {
-  transform: scale(1.1);
-}
-
-/* Información de countdown - MEJORADA */
-.countdown-info {
-  margin-bottom: 2rem;
-  padding: 1.5rem;
-  background: linear-gradient(135deg, rgba(79, 70, 229, 0.1) 0%, rgba(124, 58, 237, 0.1) 100%);
-  border: 2px solid rgba(79, 70, 229, 0.2);
-  border-radius: 1rem;
-  max-width: 350px;
-  width: 100%;
-  backdrop-filter: blur(10px);
-  animation: pulse-border 2s infinite;
-}
-
-@keyframes pulse-border {
-  0%, 100% {
-    border-color: rgba(79, 70, 229, 0.2);
-    box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.1);
-  }
-  50% {
-    border-color: rgba(79, 70, 229, 0.4);
-    box-shadow: 0 0 0 8px rgba(79, 70, 229, 0.05);
-  }
-}
-
-.countdown-text {
-  font-size: 1rem;
-  color: #4f46e5;
-  font-weight: 700;
-  margin: 0 0 0.75rem 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-}
-
-.countdown-text::before {
-  content: '⏱️';
-  font-size: 1.2rem;
-}
-
-.btn-link {
-  background: none;
-  border: none;
-  color: #6b7280;
-  font-size: 0.9rem;
-  cursor: pointer;
-  text-decoration: underline;
-  transition: all 0.3s ease;
-  padding: 0.5rem 1rem;
-  border-radius: 0.5rem;
-}
-
-.btn-link:hover {
-  color: #4f46e5;
-  background: rgba(79, 70, 229, 0.1);
-  text-decoration: none;
-}
-
-.cancel-countdown {
-  padding: 0.5rem 1rem;
-  font-weight: 600;
+  padding: 1rem 2rem;
 }
 
 /* Información adicional */
 .additional-info {
-  margin-bottom: 2rem;
-  width: 100%;
-  max-width: 400px;
+  margin-top: 2rem;
 }
 
-.info-card {
-  background: rgba(255, 255, 255, 0.7);
-  border-radius: 1rem;
-  padding: 1.5rem;
-  display: flex;
-  align-items: flex-start;
-  gap: 1rem;
-  text-align: left;
-  backdrop-filter: blur(10px);
-}
-
-.info-card i {
-  color: #f59e0b;
-  font-size: 1.5rem;
-  margin-top: 0.25rem;
-}
-
-.info-content h4 {
-  margin: 0 0 0.75rem 0;
-  color: #1f2937;
-  font-size: 1rem;
-  font-weight: 700;
-}
-
-.steps-list {
-  margin: 0;
-  padding-left: 1.2rem;
-  color: #4b5563;
-}
-
-.steps-list li {
+.countdown-text {
   font-size: 0.9rem;
-  line-height: 1.4;
-  margin-bottom: 0.25rem;
-}
-
-/* Enlaces del footer */
-.footer-links {
-  width: 100%;
-  max-width: 350px;
-}
-
-.help-text {
-  font-size: 0.85rem;
   color: #6b7280;
-  line-height: 1.4;
-  margin: 0;
   font-style: italic;
 }
 
@@ -529,18 +336,17 @@
   }
   
   .success-icon {
-    width: 80px;
-    height: 80px;
-  }
-  
-  .success-icon::before {
     width: 100px;
     height: 100px;
   }
   
-  .checkmark {
-    width: 40px;
-    height: 40px;
+  .success-icon::before {
+    width: 120px;
+    height: 120px;
+  }
+  
+  .success-icon i {
+    font-size: 3rem;
   }
 }
 
@@ -578,32 +384,25 @@
   }
   
   .success-icon {
-    width: 70px;
-    height: 70px;
-  }
-  
-  .success-icon::before {
     width: 90px;
     height: 90px;
   }
   
-  .checkmark {
-    width: 35px;
-    height: 35px;
+  .success-icon::before {
+    width: 110px;
+    height: 110px;
   }
   
-  .success-content {
+  .success-icon i {
+    font-size: 2.5rem;
+  }
+  
+  .btn {
     max-width: 100%;
-  }
-  
-  .info-card {
-    flex-direction: column;
-    text-align: center;
-    gap: 0.75rem;
   }
 }
 
 /* Iconos de Bootstrap */
 .bi {
   font-size: inherit;
-} 
+}

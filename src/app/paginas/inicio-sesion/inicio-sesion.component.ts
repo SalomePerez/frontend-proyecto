@@ -134,15 +134,15 @@ export class InicioSesionComponent implements OnInit, OnDestroy {
   private simulateLogin(loginData: LoginRequest): void {
     // Simulación de login para desarrollo (remover en producción)
     setTimeout(() => {
-      if (loginData.email === 'admin@segurapp.com' && loginData.password === '123456') {
+      if (loginData.email === 'cliente@segurapp.com' && loginData.password === '123456') {
         const mockResponse: LoginResponse = {
           token: 'mock-jwt-token',
           user: {
             id: 1,
             email: loginData.email,
-            nombre: 'Administrador',
+            nombre: 'Cliente',
             apellido: 'SegurApp',
-            rol: 'ADMIN'
+            rol: 'CLIENTE'
           },
           message: 'Login exitoso'
         };
@@ -231,7 +231,7 @@ export class InicioSesionComponent implements OnInit, OnDestroy {
   // Método para testing (remover en producción)
   fillTestCredentials(): void {
     this.loginForm.patchValue({
-      email: 'admin@segurapp.com',
+      email: 'cliente@segurapp.com',
       password: '123456'
     });
   }

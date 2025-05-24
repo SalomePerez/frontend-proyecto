@@ -1,5 +1,4 @@
-<div class="registro-container d-flex flex-row">
-  
+<div class="activar-cuenta-container">
   <!-- Sección izquierda - Información de la app -->
   <section class="left-section" aria-label="Información de la aplicación">
     <div class="brand-section">
@@ -27,18 +26,80 @@
     </div>
   </section>
 
-  <!-- Lado derecho -->
-  <div class="right-panel d-flex flex-column justify-content-center align-items-center text-center px-4">
-    <h1 class="fw-bold mb-3">¡Registro Exitoso!</h1>
+  <!-- Sección derecha - Mensaje de éxito -->
+  <div class="right-panel">
+    <div class="success-content">
+      <h2 class="form-title">¡Registro Exitoso!</h2>
+      
+      <p class="success-message">
+        Tu cuenta ha sido creada exitosamente. Ahora necesitas activar tu cuenta para poder iniciar sesión.
+      </p>
 
-    <i class="fa fa-check-circle check-icon mb-4" aria-hidden="true"></i>
+      <!-- Ícono de éxito -->
+      <div class="success-icon-container">
+        <div class="success-icon">
+          <svg class="checkmark" viewBox="0 0 52 52">
+            <circle class="checkmark-circle" cx="26" cy="26" r="25" fill="none"/>
+            <path class="checkmark-check" fill="none" d="m14.1 27.2l7.1 7.2 16.7-16.8"/>
+          </svg>
+        </div>
+      </div>
 
-    <p class="mb-4 px-5">
-      Tu cuenta ha sido creada con éxito. Ahora puedes iniciar sesión y comenzar a reportar incidentes en tu comunidad.
-    </p>
+      <!-- Información del usuario -->
+      <div class="user-info" *ngIf="userEmail">
+        <p class="user-email">
+          <i class="bi bi-envelope"></i>
+          {{ userEmail }}
+        </p>
+        <p class="activation-text">
+          Hemos enviado un código de activación a tu correo electrónico.
+        </p>
+      </div>
 
-    <button class="btn btn-primary rounded-pill px-4 py-2 fw-semibold" (click)="irALogin()">
-      Activar cuenta
-    </button>
+      <!-- Botón para activar cuenta -->
+      <button 
+        type="button" 
+        class="btn primary-btn activate-btn"
+        (click)="activateAccountNow()"
+        [disabled]="!hasUserData">
+        <i class="bi bi-shield-check me-2"></i>
+        Activar Cuenta
+      </button>
+
+      <!-- Mensaje de countdown -->
+      <div class="countdown-info" *ngIf="showCountdown">
+        <p class="countdown-text">
+          Serás redirigido para activar tu cuenta en {{ countdown }} segundos...
+        </p>
+        <button 
+          type="button" 
+          class="btn-link cancel-countdown"
+          (click)="cancelCountdown()">
+          Cancelar redirección automática
+        </button>
+      </div>
+
+      <!-- Información adicional -->
+      <div class="additional-info">
+        <div class="info-card">
+          <i class="bi bi-lightbulb"></i>
+          <div class="info-content">
+            <h4>¿Qué sigue?</h4>
+            <ul class="steps-list">
+              <li>Revisa tu correo electrónico</li>
+              <li>Ingresa el código de activación</li>
+              <li>¡Comienza a usar SegurApp!</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- Enlaces adicionales -->
+      <div class="footer-links">
+        <p class="help-text">
+          ¿No recibiste el email? Podrás solicitar un nuevo código en la siguiente pantalla.
+        </p>
+      </div>
+    </div>
   </div>
 </div>

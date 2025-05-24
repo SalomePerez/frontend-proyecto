@@ -1,67 +1,177 @@
 <div class="d-flex flex-column align-items-center min-vh-100 fondo-registro">
   <!-- Título fuera de la tarjeta -->
   <h2 class="fw-bold titulo-exterior mt-5">Regístrate</h2>
-
+  
   <!-- Tarjeta azul clarito -->
   <div class="formulario-registro p-4 my-3 w-100" style="max-width: 800px;">
     <form [formGroup]="registroForm" (ngSubmit)="registrar()" novalidate>
+      <div class="form-grid">
+        <!-- Grupo 1: Nombre -->
+        <div class="form-group">
+          <label for="nombre">Nombre *</label>
+          <input 
+            id="nombre" 
+            type="text" 
+            formControlName="nombre" 
+            class="form-control input-redondeado"
+            [class.is-invalid]="nombreControl?.invalid && nombreControl?.touched"
+            placeholder="Ingresa tu nombre completo" />
+          <div class="invalid-feedback" *ngIf="nombreControl?.invalid && nombreControl?.touched">
+            <span *ngIf="nombreControl?.errors?.['required']">El nombre es requerido</span>
+            <span *ngIf="nombreControl?.errors?.['minlength']">El nombre debe tener al menos 2 caracteres</span>
+          </div>
+        </div>
 
-      <form [formGroup]="registroForm" (ngSubmit)="registrar()" novalidate>
-  <div class="form-grid">
-    
-    <!-- Grupo 1: Nombre -->
-    <div class="form-group">
-      <label for="nombre">Nombre</label>
-      <input id="nombre" type="text" formControlName="nombre" class="form-control input-redondeado" />
-    </div>
+        <!-- Grupo 2: Email -->
+        <div class="form-group">
+          <label for="email">Email *</label>
+          <input 
+            id="email" 
+            type="email" 
+            formControlName="email" 
+            class="form-control input-redondeado"
+            [class.is-invalid]="emailControl?.invalid && emailControl?.touched"
+            placeholder="ejemplo@correo.com" />
+          <div class="invalid-feedback" *ngIf="emailControl?.invalid && emailControl?.touched">
+            <span *ngIf="emailControl?.errors?.['required']">El email es requerido</span>
+            <span *ngIf="emailControl?.errors?.['email']">Ingresa un email válido</span>
+          </div>
+        </div>
 
-    <!-- Grupo 2: Email -->
-    <div class="form-group">
-      <label for="email">Email</label>
-      <input id="email" type="email" formControlName="email" class="form-control input-redondeado" />
-    </div>
+        <!-- Grupo 3: Teléfono -->
+        <div class="form-group">
+          <label for="telefono">Teléfono *</label>
+          <input 
+            id="telefono" 
+            type="tel" 
+            formControlName="telefono" 
+            class="form-control input-redondeado"
+            [class.is-invalid]="telefonoControl?.invalid && telefonoControl?.touched"
+            placeholder="3001234567" 
+            maxlength="10" />
+          <div class="invalid-feedback" *ngIf="telefonoControl?.invalid && telefonoControl?.touched">
+            <span *ngIf="telefonoControl?.errors?.['required']">El teléfono es requerido</span>
+            <span *ngIf="telefonoControl?.errors?.['pattern']">El teléfono debe tener 10 dígitos</span>
+          </div>
+        </div>
 
-    <!-- Grupo 3: Teléfono -->
-    <div class="form-group">
-      <label for="telefono">Teléfono</label>
-      <input id="telefono" type="text" formControlName="telefono" class="form-control input-redondeado" />
-    </div>
+        <!-- Grupo 4: Contraseña -->
+        <div class="form-group">
+          <label for="password">Contraseña *</label>
+          <div class="input-group">
+            <input 
+              id="password" 
+              [type]="mostrarPassword ? 'text' : 'password'" 
+              formControlName="password" 
+              class="form-control input-redondeado"
+              [class.is-invalid]="passwordControl?.invalid && passwordControl?.touched"
+              placeholder="Mínimo 6 caracteres" />
+            <button 
+              class="btn btn-outline-secondary toggle-password-btn" 
+              type="button" 
+              (click)="togglePassword()">
+              <i [class]="mostrarPassword ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
+            </button>
+          </div>
+          <div class="invalid-feedback" *ngIf="passwordControl?.invalid && passwordControl?.touched">
+            <span *ngIf="passwordControl?.errors?.['required']">La contraseña es requerida</span>
+            <span *ngIf="passwordControl?.errors?.['minlength']">La contraseña debe tener al menos 6 caracteres</span>
+          </div>
+        </div>
 
-    <!-- Grupo 4: Contraseña -->
-    <div class="form-group">
-      <label for="password">Contraseña</label>
-      <input id="password" type="password" formControlName="password" class="form-control input-redondeado" />
-    </div>
+        <!-- Grupo 5: Ciudad -->
+        <div class="form-group">
+          <label for="ciudad">Ciudad *</label>
+          <input 
+            id="ciudad" 
+            type="text" 
+            formControlName="ciudad" 
+            class="form-control input-redondeado"
+            placeholder="Ej: Bogotá, Medellín, Cali" />
+        </div>
 
-    <!-- Grupo 5: Ciudad -->
-    <div class="form-group">
-      <label for="ciudad">Ciudad</label>
-      <input id="ciudad" type="text" formControlName="ciudad" class="form-control input-redondeado" />
-    </div>
+        <!-- Grupo 6: Confirmar contraseña -->
+        <div class="form-group">
+          <label for="confirmarPassword">Confirmar contraseña *</label>
+          <div class="input-group">
+            <input 
+              id="confirmarPassword" 
+              [type]="mostrarConfirmPassword ? 'text' : 'password'" 
+              formControlName="confirmarPassword" 
+              class="form-control input-redondeado"
+              [class.is-invalid]="(confirmarPasswordControl?.invalid && confirmarPasswordControl?.touched) || (registroForm.hasError('passwordsMismatch') && confirmarPasswordControl?.touched)"
+              placeholder="Repite tu contraseña" />
+            <button 
+              class="btn btn-outline-secondary toggle-password-btn" 
+              type="button" 
+              (click)="toggleConfirmPassword()">
+              <i [class]="mostrarConfirmPassword ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
+            </button>
+          </div>
+          <div class="invalid-feedback" *ngIf="confirmarPasswordControl?.invalid && confirmarPasswordControl?.touched">
+            <span *ngIf="confirmarPasswordControl?.errors?.['required']">Confirma tu contraseña</span>
+          </div>
+        </div>
 
-    <!-- Grupo 6: Confirmar contraseña -->
-    <div class="form-group">
-      <label for="confirmarPassword">Confirmar contraseña</label>
-      <input id="confirmarPassword" type="password" formControlName="confirmarPassword" class="form-control input-redondeado" />
-    </div>
+        <!-- Grupo 7: Dirección -->
+        <div class="form-group form-group-full">
+          <label for="direccion">Dirección *</label>
+          <input 
+            id="direccion" 
+            type="text" 
+            formControlName="direccion" 
+            class="form-control input-redondeado"
+            placeholder="Calle, carrera, número, barrio" />
+        </div>
+      </div>
 
-    <!-- Grupo 7: Dirección (si lo necesitas como octavo) -->
-    <div class="form-group">
-      <label for="direccion">Dirección</label>
-      <input id="direccion" type="text" formControlName="direccion" class="form-control input-redondeado" />
-    </div>
+      <!-- Mensaje de error de contraseñas no coinciden -->
+      <div *ngIf="registroForm.hasError('passwordsMismatch') && confirmarPasswordControl?.touched" class="alert alert-danger text-center my-3">
+        <i class="fas fa-exclamation-triangle me-2"></i>
+        Las contraseñas no coinciden
+      </div>
 
+      <!-- Mensaje de error general -->
+      <div *ngIf="errorMessage" class="alert alert-danger text-center my-3">
+        <i class="fas fa-exclamation-triangle me-2"></i>
+        {{ errorMessage }}
+      </div>
+
+      <!-- Mensaje de carga -->
+      <div *ngIf="isLoading" class="alert alert-info text-center my-3">
+        <div class="d-flex align-items-center justify-content-center">
+          <div class="spinner-border spinner-border-sm me-2" role="status">
+            <span class="visually-hidden">Cargando...</span>
+          </div>
+          Registrando usuario...
+        </div>
+      </div>
+
+      <!-- Botón centrado -->
+      <div class="boton-container">
+        <button 
+          class="btn btn-primary boton-registro" 
+          type="submit" 
+          [disabled]="registroForm.invalid || isLoading">
+          <span *ngIf="!isLoading">
+            <i class="fa-solid fa-check me-2"></i>Registrarme
+          </span>
+          <span *ngIf="isLoading">
+            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+            Registrando...
+          </span>
+        </button>
+      </div>
+
+      <!-- Enlace para ir al login -->
+      <div class="text-center mt-3">
+        <p class="mb-0" style="color: #2c3e50;">
+          ¿Ya tienes una cuenta? 
+          <a (click)="goToLogin()" class="text-decoration-none fw-bold" style="color: #1e40af; cursor: pointer;">
+            Inicia Sesión
+          </a>
+        </p>
+      </div>
+    </form>
   </div>
-
-  <!-- Mensaje de error -->
-  <div *ngIf="registroForm.hasError('passwordsMismatch')" class="alert alert-danger text-center my-3">
-    Las contraseñas no coinciden
-  </div>
-
-  <!-- Botón centrado -->
-  <div class="boton-container">
-    <button class="btn btn-primary boton-registro" type="submit" [disabled]="registroForm.invalid">
-      <i class="fa-solid fa-check me-2"></i>Registrarme
-    </button>
-  </div>
-</form>
+</div>

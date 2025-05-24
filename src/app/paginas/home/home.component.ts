@@ -31,12 +31,13 @@ export class HomeComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Navegar a la página de registro
+   * Navegar a la página de registro - RUTA CORREGIDA
    */
   navigateToRegister(): void {
     try {
       this.isLoading = true;
-      this.router.navigate(['/auth/register']);
+      console.log('Navegando a registro...');
+      this.router.navigate(['/registro']);
     } catch (error) {
       console.error('Error navegando a registro:', error);
       this.isLoading = false;
@@ -44,12 +45,13 @@ export class HomeComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Navegar a la página de login
+   * Navegar a la página de login - RUTA CORREGIDA
    */
   navigateToLogin(): void {
     try {
       this.isLoading = true;
-      this.router.navigate(['/auth/login']);
+      console.log('Navegando a login...');
+      this.router.navigate(['/login']);
     } catch (error) {
       console.error('Error navegando a login:', error);
       this.isLoading = false;
@@ -60,14 +62,46 @@ export class HomeComponent implements OnInit, OnDestroy {
    * Mostrar acciones rápidas (botón flotante)
    */
   showQuickActions(): void {
-    // Implementar lógica para mostrar menú de acciones rápidas
-    // Por ejemplo: reportar incidente rápido, llamada de emergencia, etc.
     console.log('Mostrando acciones rápidas...');
     
-    // Ejemplo de implementación futura:
-    // this.dialog.open(QuickActionsComponent);
-    // O mostrar un menú contextual
-    this.showQuickActionsMenu();
+    // Mostrar opciones disponibles
+    const actions = [
+      { 
+        label: 'Ir a Registro', 
+        action: () => this.navigateToRegister(),
+        icon: 'fa-user-plus'
+      },
+      { 
+        label: 'Ir a Login', 
+        action: () => this.navigateToLogin(),
+        icon: 'fa-sign-in-alt'
+      },
+      { 
+        label: 'Ver Principal Cliente (Demo)', 
+        action: () => this.navigateToPrincipalCliente(),
+        icon: 'fa-home'
+      }
+    ];
+
+    // Por ahora mostrar en consola, puedes implementar un modal después
+    console.log('Acciones disponibles:', actions);
+    
+    // Acción por defecto: ir a registro
+    this.navigateToRegister();
+  }
+
+  /**
+   * Navegar al dashboard principal (para demo)
+   */
+  navigateToPrincipalCliente(): void {
+    try {
+      this.isLoading = true;
+      console.log('Navegando al dashboard principal...');
+      this.router.navigate(['/principal-cliente']);
+    } catch (error) {
+      console.error('Error navegando al dashboard:', error);
+      this.isLoading = false;
+    }
   }
 
   /**
@@ -91,52 +125,9 @@ export class HomeComponent implements OnInit, OnDestroy {
     imagesToPreload.forEach(imageSrc => {
       const img = new Image();
       img.src = imageSrc;
+      img.onload = () => console.log(`Imagen precargada: ${imageSrc}`);
+      img.onerror = () => console.warn(`Error precargando imagen: ${imageSrc}`);
     });
-  }
-
-  /**
-   * Mostrar menú de acciones rápidas
-   */
-  private showQuickActionsMenu(): void {
-    // Implementación temporal - puedes expandir esto
-    const actions = [
-      { label: 'Reportar Incidente', action: () => this.reportIncident() },
-      { label: 'Llamada de Emergencia', action: () => this.emergencyCall() },
-      { label: 'Ver Alertas', action: () => this.viewAlerts() }
-    ];
-
-    // Por ahora solo log, pero puedes implementar un modal o dropdown
-    console.log('Acciones disponibles:', actions);
-    
-    // Ejemplo de navegación a reporte rápido
-    // this.router.navigate(['/quick-report']);
-  }
-
-  /**
-   * Reportar incidente rápido
-   */
-  private reportIncident(): void {
-    console.log('Iniciando reporte de incidente...');
-    // Navegar a formulario de reporte o modal
-    // this.router.navigate(['/report/incident']);
-  }
-
-  /**
-   * Llamada de emergencia
-   */
-  private emergencyCall(): void {
-    console.log('Iniciando llamada de emergencia...');
-    // Implementar lógica de llamada de emergencia
-    // window.location.href = 'tel:911';
-  }
-
-  /**
-   * Ver alertas
-   */
-  private viewAlerts(): void {
-    console.log('Mostrando alertas...');
-    // Navegar a página de alertas
-    // this.router.navigate(['/alerts']);
   }
 
   /**
@@ -146,8 +137,15 @@ export class HomeComponent implements OnInit, OnDestroy {
     const target = event.target as HTMLImageElement;
     console.warn('Error cargando imagen:', target.src);
     
-    // Puedes establecer una imagen por defecto
-    // target.src = 'assets/placeholder.png';
+    // Establecer imagen por defecto o placeholder
+    if (target.src.includes('logo.png')) {
+      // Si falla el logo, usar un ícono por defecto
+      target.style.display = 'none';
+    } else if (target.src.includes('mapa.png')) {
+      // Si falla el mapa, usar un color de fondo
+      target.style.backgroundColor = '#e5e7eb';
+      target.alt = 'Mapa no disponible';
+    }
   }
 
   /**
@@ -156,6 +154,7 @@ export class HomeComponent implements OnInit, OnDestroy {
   onImageLoad(event: Event): void {
     const target = event.target as HTMLImageElement;
     console.log('Imagen cargada correctamente:', target.src);
+    target.style.opacity = '1';
   }
 
   /**
@@ -164,6 +163,7 @@ export class HomeComponent implements OnInit, OnDestroy {
   onMapClick(event: MouseEvent): void {
     console.log('Click en mapa:', event);
     // Implementar lógica de interacción con el mapa si es necesario
+    // Por ejemplo, mostrar información de la ubicación clickeada
   }
 
   /**
@@ -180,18 +180,63 @@ export class HomeComponent implements OnInit, OnDestroy {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          console.log('Ubicación actual:', {
+          const location = {
             lat: position.coords.latitude,
             lng: position.coords.longitude
-          });
+          };
+          console.log('Ubicación actual:', location);
+          
           // Usar la ubicación para personalizar la experiencia
+          this.personalizeByLocation(location);
         },
         (error) => {
-          console.warn('Error obteniendo ubicación:', error);
+          console.warn('Error obteniendo ubicación:', error.message);
+          // Usar ubicación por defecto (ej: Bogotá)
+          this.personalizeByLocation({ lat: 4.6097, lng: -74.0817 });
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 300000
         }
       );
     } else {
       console.warn('Geolocalización no soportada');
+    }
+  }
+
+  /**
+   * Personalizar experiencia basada en ubicación
+   */
+  private personalizeByLocation(location: { lat: number, lng: number }): void {
+    console.log('Personalizando experiencia para ubicación:', location);
+    // Aquí puedes implementar lógica para mostrar información relevante
+    // según la ubicación del usuario
+  }
+
+  /**
+   * Verificar si hay sesión activa
+   */
+  checkActiveSession(): void {
+    const token = localStorage.getItem('token');
+    const userData = localStorage.getItem('user');
+    
+    if (token && userData) {
+      console.log('Sesión activa detectada');
+      // Redirigir al dashboard apropiado
+      try {
+        const user = JSON.parse(userData);
+        if (user.rol === 'cliente') {
+          this.router.navigate(['/principal-cliente']);
+        } else if (user.rol === 'admin') {
+          this.router.navigate(['/inicio-admin']);
+        }
+      } catch (error) {
+        console.error('Error parseando datos de usuario:', error);
+        // Limpiar datos corruptos
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+      }
     }
   }
 }

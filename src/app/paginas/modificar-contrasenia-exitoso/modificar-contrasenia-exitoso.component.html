@@ -1,0 +1,64 @@
+<div class="activar-cuenta-container">
+  <!-- Sección izquierda - Información de la app -->
+  <section class="left-section" aria-label="Información de la aplicación">
+    <div class="brand-section">
+      <div class="logo-container">
+        <img 
+          src="assets/logo.png" 
+          alt="Logo de SegurApp" 
+          class="logo-icon" />
+        <h1 class="brand-name">SegurApp</h1>
+      </div>
+    </div>
+
+    <div class="content-section">
+      <h2 class="main-title">Protege tu comunidad con SegurApp</h2>
+      <p class="subtitle">
+        ¡Reporta, colabora y haz la diferencia en tu ciudad!
+      </p>
+
+      <div class="description-section">
+        <p class="description">
+          Conéctate con tu comunidad y mejora la seguridad. Reporta incidentes, recibe 
+          alertas y colabora por un entorno más seguro. ¡Actúa con SegurApp!
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Sección derecha - Mensaje de éxito -->
+  <div class="right-panel">
+    <div class="success-content">
+      <h2 class="form-title">Recupera tu contraseña</h2>
+      
+      <p class="success-message">
+        Tu contraseña se ha restablecido correctamente, ya puedes iniciar sesión.
+      </p>
+
+      <!-- Ícono de éxito -->
+      <div class="success-icon-container">
+        <div class="success-icon">
+          <svg class="checkmark" viewBox="0 0 52 52">
+            <circle class="checkmark-circle" cx="26" cy="26" r="25" fill="none"/>
+            <path class="checkmark-check" fill="none" d="m14.1 27.2l7.1 7.2 16.7-16.8"/>
+          </svg>
+        </div>
+      </div>
+
+      <!-- Botón para ir al login -->
+      <button 
+        type="button" 
+        class="btn primary-btn login-redirect-btn"
+        (click)="goToLogin()">
+        Iniciar Sesión
+      </button>
+
+      <!-- Mensaje adicional opcional -->
+      <div class="additional-info" *ngIf="showCountdown">
+        <p class="countdown-text">
+          Serás redirigido automáticamente en {{ countdown }} segundos...
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
