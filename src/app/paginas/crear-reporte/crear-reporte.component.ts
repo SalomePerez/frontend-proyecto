@@ -5,8 +5,10 @@ import { Router } from '@angular/router';
 import { Subject, takeUntil } from 'rxjs';
 import mapboxgl from 'mapbox-gl';
 import { environment } from '../../../environments/environment';
+import { ReporteService, CategoriaBackend } from '../../servicios/reporte.service';
+import { AuthService } from '../../servicios/auth.service';
 
-// Interfaces basadas en tu DTO
+// Interfaces para el frontend
 interface UbicacionDTO {
   latitud: number;
   longitud: number;
@@ -70,9 +72,11 @@ export class CrearReporteComponent implements OnInit, OnDestroy, AfterViewInit {
   currentStep: number = 1;
   totalSteps: number = 5;
   isLoadingLocation: boolean = false;
+  isLoadingCategorias: boolean = false;
 
-  // Datos
+  // Datos del backend
   categorias: Categoria[] = [];
+  categoriasBackend: CategoriaBackend[] = [];
   fotosSeleccionadas: File[] = [];
   previewUrls: string[] = [];
   prioridadesDisponibles: Array<'baja' | 'media' | 'alta' | 'critica'> = ['baja', 'media', 'alta', 'critica'];
@@ -84,27 +88,32 @@ export class CrearReporteComponent implements OnInit, OnDestroy, AfterViewInit {
   mapError: string = '';
   private readonly MAPBOX_TOKEN = environment.mapboxToken;
 
+  // Estados de progreso
+  uploadProgress: number = 0;
+  currentUploadStep: string = '';
+
   private destroy$ = new Subject<void>();
 
   constructor(
     private router: Router,
     private ngZone: NgZone,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private reporteService: ReporteService,
+    private authService: AuthService
   ) {
-    console.log('🏗️ Inicializando CrearReporteComponent...');
-    this.initializeCategorias();
+    console.log('🏗️ Inicializando CrearReporteComponent con backend...');
     this.loadUserData();
     this.configureMapbox();
   }
 
   ngOnInit(): void {
-    console.log('🚀 ngOnInit - Detectando ubicación inicial...');
+    console.log('🚀 ngOnInit - Cargando datos del backend...');
+    this.loadCategoriasFromBackend();
     this.detectarUbicacionActual();
   }
 
   ngAfterViewInit(): void {
     console.log('🔄 ngAfterViewInit - Preparando para inicializar mapa si es necesario...');
-    // El mapa se inicializará cuando se llegue al paso 4
   }
 
   ngOnDestroy(): void {
@@ -124,53 +133,120 @@ export class CrearReporteComponent implements OnInit, OnDestroy, AfterViewInit {
     }
   }
 
-  private initializeCategorias(): void {
-    this.categorias = [
-      {
-        id: 'emergencia',
-        nombre: 'Emergencia',
-        icono: 'bi bi-exclamation-triangle-fill',
-        color: '#ef4444',
-        descripcion: 'Situaciones que requieren atención inmediata (accidentes, incendios, etc.)'
-      },
-      {
-        id: 'seguridad',
-        nombre: 'Seguridad',
-        icono: 'bi bi-shield-exclamation',
+  /**
+   * Cargar categorías desde el backend
+   */
+  private loadCategoriasFromBackend(): void {
+    console.log('📋 Cargando categorías desde el backend...');
+    this.isLoadingCategorias = true;
+    
+    this.reporteService.getCategorias()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (categorias) => {
+          console.log('✅ Categorías cargadas del backend:', categorias);
+          this.categoriasBackend = categorias;
+          this.mapCategoriasToFrontend(categorias);
+          this.isLoadingCategorias = false;
+          this.cdr.detectChanges();
+        },
+        error: (error) => {
+          console.error('❌ Error cargando categorías:', error);
+          this.formErrors.categorias = 'Error cargando categorías. Usando categorías por defecto.';
+          this.initializeDefaultCategorias();
+          this.isLoadingCategorias = false;
+          this.cdr.detectChanges();
+        }
+      });
+  }
+
+  /**
+   * Mapear categorías del backend al formato del frontend
+   */
+  private mapCategoriasToFrontend(categoriasBackend: CategoriaBackend[]): void {
+    const iconosYColores: { [key: string]: { icono: string; color: string; descripcion: string } } = {
+      'Seguridad': { 
+        icono: 'bi bi-shield-exclamation', 
         color: '#f59e0b',
         descripcion: 'Problemas de seguridad ciudadana (robos, vandalismo, etc.)'
       },
-      {
-        id: 'infraestructura',
-        nombre: 'Infraestructura',
-        icono: 'bi bi-tools',
+      'Emergencia': { 
+        icono: 'bi bi-exclamation-triangle-fill', 
+        color: '#ef4444',
+        descripcion: 'Situaciones que requieren atención inmediata (accidentes, incendios, etc.)'
+      },
+      'Infraestructura': { 
+        icono: 'bi bi-tools', 
         color: '#3b82f6',
         descripcion: 'Problemas con servicios públicos (semáforos, alumbrado, etc.)'
       },
+      'Otros': { 
+        icono: 'bi bi-chat-dots', 
+        color: '#6b7280',
+        descripcion: 'Otras situaciones que requieren atención'
+      }
+    };
+
+    this.categorias = categoriasBackend.map(categoria => ({
+      id: categoria.id,
+      nombre: categoria.nombre,
+      icono: iconosYColores[categoria.nombre]?.icono || 'bi bi-question-circle',
+      color: iconosYColores[categoria.nombre]?.color || '#6b7280',
+      descripcion: iconosYColores[categoria.nombre]?.descripcion || 'Categoría de reporte'
+    }));
+
+    console.log('🎨 Categorías mapeadas:', this.categorias);
+  }
+
+  /**
+   * Categorías por defecto en caso de error
+   */
+  private initializeDefaultCategorias(): void {
+    this.categorias = [
       {
-        id: 'otros',
+        id: 'default-emergencia',
+        nombre: 'Emergencia',
+        icono: 'bi bi-exclamation-triangle-fill',
+        color: '#ef4444',
+        descripcion: 'Situaciones que requieren atención inmediata'
+      },
+      {
+        id: 'default-seguridad',
+        nombre: 'Seguridad',
+        icono: 'bi bi-shield-exclamation',
+        color: '#f59e0b',
+        descripcion: 'Problemas de seguridad ciudadana'
+      },
+      {
+        id: 'default-infraestructura',
+        nombre: 'Infraestructura',
+        icono: 'bi bi-tools',
+        color: '#3b82f6',
+        descripcion: 'Problemas con servicios públicos'
+      },
+      {
+        id: 'default-otros',
         nombre: 'Otros',
         icono: 'bi bi-chat-dots',
         color: '#6b7280',
-        descripcion: 'Otras situaciones que requieren atención'
+        descripcion: 'Otras situaciones'
       }
     ];
   }
 
   private loadUserData(): void {
-    if (typeof Storage !== 'undefined') {
-      const userData = localStorage.getItem('user');
-      if (userData) {
-        try {
-          const user = JSON.parse(userData);
-          this.reporte.idUsuario = user.id || 'user-123';
-        } catch (error) {
-          console.warn('Error parsing user data:', error);
-          this.reporte.idUsuario = 'user-123';
-        }
+    try {
+      const usuario = this.authService.getCurrentUser();
+      if (usuario) {
+        this.reporte.idUsuario = usuario.id;
+        console.log('👤 Usuario cargado:', usuario.nombre);
       } else {
-        this.reporte.idUsuario = 'user-123';
+        console.warn('⚠️ No se encontró usuario autenticado');
+        this.reporte.idUsuario = 'usuario-anonimo-' + Date.now();
       }
+    } catch (error) {
+      console.error('❌ Error cargando datos del usuario:', error);
+      this.reporte.idUsuario = 'usuario-error-' + Date.now();
     }
   }
 
@@ -180,7 +256,6 @@ export class CrearReporteComponent implements OnInit, OnDestroy, AfterViewInit {
       if (this.currentStep < this.totalSteps) {
         this.currentStep++;
         
-        // Inicializar mapa cuando llegue al paso 4 (ubicación)
         if (this.currentStep === 4) {
           setTimeout(() => this.initializeMapbox(), 300);
         }
@@ -234,18 +309,28 @@ export class CrearReporteComponent implements OnInit, OnDestroy, AfterViewInit {
         break;
 
       case 3: // Prioridad y configuraciones
-        // Validaciones opcionales, ya que tienen valores por defecto
+        // Validaciones opcionales
         break;
 
       case 4: // Ubicación
-        if (!this.reporte.ubicacion.direccion.trim()) {
-          this.formErrors.ubicacion = 'Debe seleccionar una ubicación';
+        if (!this.reporte.ubicacion.latitud || !this.reporte.ubicacion.longitud) {
+          this.formErrors.ubicacion = 'Debe seleccionar una ubicación válida';
           isValid = false;
         }
         break;
 
-      case 5: // Fotos (opcional)
-        // Las fotos son opcionales
+      case 5: // Fotos
+        // Validar archivos si existen
+        if (this.fotosSeleccionadas.length > 0) {
+          for (const archivo of this.fotosSeleccionadas) {
+            const validacion = this.reporteService.validarArchivoImagen(archivo);
+            if (!validacion.valido) {
+              this.formErrors.fotos = validacion.error;
+              isValid = false;
+              break;
+            }
+          }
+        }
         break;
     }
 
@@ -317,6 +402,7 @@ export class CrearReporteComponent implements OnInit, OnDestroy, AfterViewInit {
 
   selectCategoria(categoria: Categoria): void {
     this.reporte.categoria = categoria.id;
+    console.log('📋 Categoría seleccionada:', categoria);
   }
 
   getCategoriaSeleccionada(): Categoria | undefined {
@@ -367,7 +453,6 @@ export class CrearReporteComponent implements OnInit, OnDestroy, AfterViewInit {
     try {
       console.log(`🔍 Obteniendo dirección para: ${lat}, ${lng}`);
       
-      // Usar Mapbox Geocoding API para obtener la dirección
       const response = await fetch(
         `https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?access_token=${this.MAPBOX_TOKEN}&language=es`
       );
@@ -393,39 +478,32 @@ export class CrearReporteComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private async initializeMapbox(): Promise<void> {
-    console.log('🗺️ Inicializando Mapbox para crear reporte...');
+    console.log('🗺️ Inicializando Mapbox...');
     
     if (!this.MAPBOX_TOKEN) {
       this.mapError = 'Token de Mapbox no configurado';
-      console.error('❌ Token de Mapbox no disponible');
       return;
     }
 
     const mapElement = document.getElementById('map-container');
     if (!mapElement) {
-      console.warn('⚠️ Elemento del mapa no encontrado, reintentando...');
       setTimeout(() => this.initializeMapbox(), 500);
       return;
     }
     
     if (this.map) {
-      console.log('✅ Mapa ya inicializado');
       return;
     }
 
     try {
-      // Verificar dimensiones del contenedor
       const rect = mapElement.getBoundingClientRect();
       if (rect.width === 0 || rect.height === 0) {
-        console.warn('⚠️ Contenedor sin dimensiones, aplicando estilos...');
         mapElement.style.width = '100%';
         mapElement.style.height = '400px';
         mapElement.style.minHeight = '400px';
         await new Promise(resolve => setTimeout(resolve, 200));
       }
 
-      console.log('📦 Creando instancia de mapa Mapbox...');
-      
       this.map = new mapboxgl.Map({
         container: 'map-container',
         style: 'mapbox://styles/mapbox/streets-v12',
@@ -434,9 +512,8 @@ export class CrearReporteComponent implements OnInit, OnDestroy, AfterViewInit {
         attributionControl: false
       });
 
-      // Eventos del mapa
       this.map.on('load', () => {
-        console.log('✅ Mapa Mapbox cargado para crear reporte');
+        console.log('✅ Mapa cargado');
         this.agregarControlesMapa();
         this.crearMarcadorInteractivo();
         this.isMapReady = true;
@@ -444,14 +521,12 @@ export class CrearReporteComponent implements OnInit, OnDestroy, AfterViewInit {
       });
 
       this.map.on('error', (error) => {
-        console.error('❌ Error en mapa Mapbox:', error);
-        this.mapError = 'Error cargando el mapa. Verifica tu conexión.';
+        console.error('❌ Error en mapa:', error);
+        this.mapError = 'Error cargando el mapa';
         this.cdr.detectChanges();
       });
 
-      // Configurar clicks en el mapa
       this.map.on('click', (e) => {
-        console.log('👆 Click en mapa detectado:', e.lngLat);
         this.actualizarUbicacion(e.lngLat.lat, e.lngLat.lng);
       });
 
@@ -466,27 +541,21 @@ export class CrearReporteComponent implements OnInit, OnDestroy, AfterViewInit {
     if (!this.map) return;
 
     try {
-      // Control de navegación
       this.map.addControl(new mapboxgl.NavigationControl(), 'top-right');
       
-      // Control de geolocalización
       const geolocateControl = new mapboxgl.GeolocateControl({
-        positionOptions: {
-          enableHighAccuracy: true
-        },
+        positionOptions: { enableHighAccuracy: true },
         trackUserLocation: false,
         showUserHeading: false
       });
       
       this.map.addControl(geolocateControl, 'top-right');
 
-      // Listener para el control de geolocalización
       geolocateControl.on('geolocate', (e: any) => {
-        console.log('📍 Geolocalización activada:', e.coords);
         this.actualizarUbicacion(e.coords.latitude, e.coords.longitude);
       });
 
-      console.log('✅ Controles de mapa agregados');
+      console.log('✅ Controles agregados');
     } catch (error) {
       console.error('❌ Error agregando controles:', error);
     }
@@ -496,7 +565,6 @@ export class CrearReporteComponent implements OnInit, OnDestroy, AfterViewInit {
     if (!this.map) return;
 
     try {
-      // Crear marcador draggable
       this.marker = new mapboxgl.Marker({
         color: '#ef4444',
         draggable: true,
@@ -505,39 +573,33 @@ export class CrearReporteComponent implements OnInit, OnDestroy, AfterViewInit {
       .setLngLat([this.reporte.ubicacion.longitud, this.reporte.ubicacion.latitud])
       .addTo(this.map);
 
-      // Listener para cuando se mueva el marcador
       this.marker.on('dragend', () => {
         if (this.marker) {
           const lngLat = this.marker.getLngLat();
-          console.log('🔄 Marcador movido a:', lngLat);
           this.actualizarUbicacion(lngLat.lat, lngLat.lng);
         }
       });
 
-      console.log('✅ Marcador interactivo creado');
+      console.log('✅ Marcador creado');
     } catch (error) {
       console.error('❌ Error creando marcador:', error);
     }
   }
 
   private actualizarUbicacion(lat: number, lng: number): void {
-    console.log(`📍 Actualizando ubicación a: ${lat}, ${lng}`);
+    console.log(`📍 Actualizando ubicación: ${lat}, ${lng}`);
     
-    // Actualizar datos del reporte
     this.reporte.ubicacion.latitud = lat;
     this.reporte.ubicacion.longitud = lng;
     
-    // Mover marcador si existe
     if (this.marker) {
       this.marker.setLngLat([lng, lat]);
     }
     
-    // Obtener dirección
     this.obtenerDireccionDeLatLng(lat, lng);
   }
 
   detectarUbicacionActualEnMapa(): void {
-    console.log('🎯 Detectando ubicación actual en mapa...');
     this.isLoadingLocation = true;
     
     if (navigator.geolocation) {
@@ -546,11 +608,8 @@ export class CrearReporteComponent implements OnInit, OnDestroy, AfterViewInit {
           const lat = position.coords.latitude;
           const lng = position.coords.longitude;
           
-          console.log('✅ Nueva ubicación:', lat, lng);
-          
           this.actualizarUbicacion(lat, lng);
           
-          // Centrar mapa en nueva ubicación
           if (this.map) {
             this.map.flyTo({
               center: [lng, lat],
@@ -566,32 +625,19 @@ export class CrearReporteComponent implements OnInit, OnDestroy, AfterViewInit {
           console.error('❌ Error detectando ubicación:', error);
           this.isLoadingLocation = false;
           this.cdr.detectChanges();
-        },
-        {
-          enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 0
         }
       );
-    } else {
-      console.warn('⚠️ Geolocalización no disponible');
-      this.isLoadingLocation = false;
-      this.cdr.detectChanges();
     }
   }
 
   forceMapInitialization(): void {
-    console.log('🔄 Forzando reinicialización del mapa...');
     this.destroyMap();
     this.mapError = '';
-    setTimeout(() => {
-      this.initializeMapbox();
-    }, 300);
+    setTimeout(() => this.initializeMapbox(), 300);
   }
 
   private destroyMap(): void {
     if (this.map) {
-      console.log('🗑️ Destruyendo mapa...');
       try {
         if (this.marker) {
           this.marker.remove();
@@ -613,31 +659,40 @@ export class CrearReporteComponent implements OnInit, OnDestroy, AfterViewInit {
   onFileSelected(event: any): void {
     const files = Array.from(event.target.files) as File[];
     
+    // Limpiar errores previos
+    delete this.formErrors.fotos;
+    
     files.forEach(file => {
-      if (file.type.startsWith('image/') && file.size <= 5 * 1024 * 1024) { // 5MB max
-        this.fotosSeleccionadas.push(file);
-        
-        // Crear preview
-        const reader = new FileReader();
-        reader.onload = (e: any) => {
-          this.previewUrls.push(e.target.result);
-          this.cdr.detectChanges();
-        };
-        reader.readAsDataURL(file);
-      } else {
-        console.warn('⚠️ Archivo inválido o muy grande:', file.name);
+      // Validar archivo
+      const validacion = this.reporteService.validarArchivoImagen(file);
+      if (!validacion.valido) {
+        this.formErrors.fotos = validacion.error;
+        return;
       }
+
+      this.fotosSeleccionadas.push(file);
+      
+      // Crear preview
+      const reader = new FileReader();
+      reader.onload = (e: any) => {
+        this.previewUrls.push(e.target.result);
+        this.cdr.detectChanges();
+      };
+      reader.readAsDataURL(file);
     });
+
+    console.log(`📸 ${this.fotosSeleccionadas.length} foto(s) seleccionada(s)`);
   }
 
   removePhoto(index: number): void {
     this.fotosSeleccionadas.splice(index, 1);
     this.previewUrls.splice(index, 1);
+    delete this.formErrors.fotos;
   }
 
-  // ENVÍO DEL FORMULARIO
+  // ENVÍO DEL FORMULARIO CON BACKEND
   async submitReporte(): Promise<void> {
-    console.log('📤 Enviando reporte...');
+    console.log('📤 Iniciando envío de reporte al backend...');
     
     if (!this.validateCurrentStep()) {
       console.warn('⚠️ Validación fallida');
@@ -649,32 +704,45 @@ export class CrearReporteComponent implements OnInit, OnDestroy, AfterViewInit {
       return;
     }
 
+    // Verificar autenticación antes de proceder
+    if (!this.verificarAutenticacion()) {
+      return;
+    }
+
     this.isSubmitting = true;
     this.formErrors = {};
+    this.uploadProgress = 0;
+    this.currentUploadStep = 'Verificando autenticación...';
+    this.cdr.detectChanges();
 
     try {
-      // Simular subida de fotos
-      const fotosUrls: string[] = [];
-      for (let i = 0; i < this.fotosSeleccionadas.length; i++) {
-        // En producción, aquí subirías las fotos a tu servidor/cloud
-        fotosUrls.push(`https://mi-servidor.com/fotos/reporte-${Date.now()}-${i}.jpg`);
+      // Verificar que tenemos los datos necesarios
+      if (!this.reporte.idUsuario && !this.reporte.esAnonimo) {
+        const usuario = this.authService.getCurrentUser();
+        if (usuario) {
+          this.reporte.idUsuario = usuario.id;
+        } else {
+          throw new Error('No se pudo obtener información del usuario');
+        }
       }
+
+      // Usar el servicio para procesar la creación completa
+      this.currentUploadStep = 'Procesando reporte...';
+      this.uploadProgress = 10;
+      this.cdr.detectChanges();
+
+      const reporteId = await this.reporteService.procesarCreacionReporte(
+        this.reporte,
+        this.fotosSeleccionadas,
+        this.reporte.esAnonimo,
+        this.reporte.esImportante,
+        this.reporte.idUsuario
+      );
+
+      console.log('🎉 Reporte creado exitosamente con ID:', reporteId);
       
-      this.reporte.fotos = fotosUrls;
-
-      // Agregar timestamp
-      const reporteCompleto = {
-        ...this.reporte,
-        fechaCreacion: new Date().toISOString(),
-        ip: 'xxx.xxx.xxx.xxx', // En producción, obtener IP real
-        userAgent: navigator.userAgent
-      };
-
-      console.log('📋 Reporte a enviar:', reporteCompleto);
-
-      // Simular envío al servidor
-      await this.enviarReporteAlServidor(reporteCompleto);
-      
+      this.currentUploadStep = 'Reporte enviado exitosamente';
+      this.uploadProgress = 100;
       this.showSuccessMessage = true;
       
       // Redirigir después de 3 segundos
@@ -682,27 +750,27 @@ export class CrearReporteComponent implements OnInit, OnDestroy, AfterViewInit {
         this.router.navigate(['/principal-cliente']);
       }, 3000);
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Error enviando reporte:', error);
-      this.formErrors.general = 'Error al enviar el reporte. Por favor, inténtalo de nuevo.';
+      
+      // Manejar errores específicos de autenticación
+      if (error.message.includes('autenticado') || error.message.includes('permisos')) {
+        this.formErrors.general = error.message;
+        
+        // Redirigir al login después de mostrar el error
+        setTimeout(() => {
+          this.authService.logout();
+          this.router.navigate(['/login'], { 
+            queryParams: { returnUrl: '/crear-reporte' }
+          });
+        }, 3000);
+      } else {
+        this.formErrors.general = error.message || 'Error al enviar el reporte. Por favor, inténtalo de nuevo.';
+      }
     } finally {
       this.isSubmitting = false;
       this.cdr.detectChanges();
     }
-  }
-
-  private async enviarReporteAlServidor(reporte: any): Promise<void> {
-    // Simular llamada HTTP
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        if (Math.random() > 0.1) { // 90% de éxito
-          console.log('✅ Reporte enviado exitosamente:', reporte);
-          resolve();
-        } else {
-          reject(new Error('Error simulado del servidor'));
-        }
-      }, 2000);
-    });
   }
 
   // NAVEGACIÓN
@@ -721,15 +789,47 @@ export class CrearReporteComponent implements OnInit, OnDestroy, AfterViewInit {
     return step <= this.currentStep || this.validateStepsUpTo(step - 1);
   }
 
-  // Método para debugging
+  // DEBUGGING
   debugInfo(): void {
-    console.log('🐛 Estado del componente:', {
+    console.log('🐛 Estado actual:', {
       currentStep: this.currentStep,
+      reporte: this.reporte,
+      categorias: this.categorias.length,
+      categoriasBackend: this.categoriasBackend.length,
+      fotos: this.fotosSeleccionadas.length,
       mapReady: this.isMapReady,
-      mapError: this.mapError,
-      ubicacion: this.reporte.ubicacion,
-      hasMap: !!this.map,
-      hasMarker: !!this.marker
+      errors: this.formErrors
     });
+  }
+
+
+  // Método para verificar autenticación antes de enviar
+  private verificarAutenticacion(): boolean {
+    if (!this.authService.isAuthenticated()) {
+      this.formErrors.general = 'Tu sesión ha expirado. Por favor, inicia sesión nuevamente.';
+      
+      setTimeout(() => {
+        this.router.navigate(['/login'], { 
+          queryParams: { returnUrl: '/crear-reporte' }
+        });
+      }, 2000);
+      
+      return false;
+    }
+
+    if (this.authService.isSessionExpiringSoon()) {
+      this.formErrors.general = 'Tu sesión ha expirado. Redirigiendo al login...';
+      
+      setTimeout(() => {
+        this.authService.logout();
+        this.router.navigate(['/login'], { 
+          queryParams: { returnUrl: '/crear-reporte' }
+        });
+      }, 2000);
+      
+      return false;
+    }
+
+    return true;
   }
 }

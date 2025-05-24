@@ -7,7 +7,8 @@
       </button>
       <div class="page-title-section">
         <h1 class="page-title">Crear Nuevo Reporte</h1>
-        <p class="page-subtitle">Reporta incidentes de seguridad en tu comunidad</p>
+        <p class="page-subtitle">Reporta incidentes de seguridad en tu
+          comunidad</p>
       </div>
     </div>
   </header>
@@ -123,7 +124,16 @@
         <p>Elige la categoría que mejor describe tu reporte</p>
       </div>
 
-      <div class="categorias-grid">
+      <!-- Loading de categorías -->
+      <div class="loading-categorias" *ngIf="isLoadingCategorias">
+        <div class="loading-content">
+          <div class="spinner"></div>
+          <p>Cargando categorías...</p>
+        </div>
+      </div>
+
+      <!-- Grid de categorías -->
+      <div class="categorias-grid" *ngIf="!isLoadingCategorias">
         <div
           class="categoria-card"
           *ngFor="let categoria of categorias"
@@ -175,7 +185,8 @@
                 *ngIf="reporte.esImportante"></i>
               <i class="bi bi-exclamation-circle"
                 *ngIf="!reporte.esImportante"></i>
-              <span>{{ reporte.esImportante ? 'Es Importante' : 'Marcar como Importante' }}</span>
+              <span>{{ reporte.esImportante ? 'Es Importante' :
+                'Marcar como Importante' }}</span>
             </button>
           </div>
         </div>
@@ -199,10 +210,13 @@
               </div>
               <div class="prioridad-info">
                 <h4>{{ prioridad | titlecase }}</h4>
-                <p *ngIf="prioridad === 'baja'">No requiere atención inmediata</p>
+                <p *ngIf="prioridad === 'baja'">No requiere atención
+                  inmediata</p>
                 <p *ngIf="prioridad === 'media'">Atención en horario regular</p>
-                <p *ngIf="prioridad === 'alta'">Requiere atención prioritaria</p>
-                <p *ngIf="prioridad === 'critica'">Emergencia - Atención inmediata</p>
+                <p *ngIf="prioridad === 'alta'">Requiere atención
+                  prioritaria</p>
+                <p *ngIf="prioridad === 'critica'">Emergencia - Atención
+                  inmediata</p>
               </div>
               <div class="prioridad-check"
                 *ngIf="reporte.prioridad === prioridad">
@@ -237,7 +251,8 @@
         <div class="config-section">
           <div class="config-header">
             <h3>Configuración de Privacidad</h3>
-            <p>Decide si quieres mantener tu identidad privada en este reporte</p>
+            <p>Decide si quieres mantener tu identidad privada en este
+              reporte</p>
           </div>
 
           <div class="privacy-options">
@@ -278,7 +293,8 @@
     <div class="form-step" *ngIf="currentStep === 4">
       <div class="step-header">
         <h2>Ubicación del Incidente</h2>
-        <p>Indica dónde ocurrió el incidente. Puedes hacer clic en el mapa o arrastrar el marcador para ajustar la ubicación</p>
+        <p>Indica dónde ocurrió el incidente. Puedes hacer clic en el mapa o
+          arrastrar el marcador para ajustar la ubicación</p>
       </div>
 
       <div class="ubicacion-section">
@@ -289,9 +305,12 @@
             </div>
             <div class="direccion-text">
               <strong>Ubicación seleccionada:</strong>
-              <p>{{ reporte.ubicacion.direccion || 'Selecciona una ubicación en el mapa' }}</p>
-              <small *ngIf="reporte.ubicacion.latitud && reporte.ubicacion.longitud">
-                Coordenadas: {{ reporte.ubicacion.latitud | number:'1.6-6' }}, {{ reporte.ubicacion.longitud | number:'1.6-6' }}
+              <p>{{ reporte.ubicacion.direccion ||
+                'Selecciona una ubicación en el mapa' }}</p>
+              <small
+                *ngIf="reporte.ubicacion.latitud && reporte.ubicacion.longitud">
+                Coordenadas: {{ reporte.ubicacion.latitud | number:'1.6-6' }},
+                {{ reporte.ubicacion.longitud | number:'1.6-6' }}
               </small>
             </div>
           </div>
@@ -303,8 +322,10 @@
               (click)="detectarUbicacionActualEnMapa()"
               [disabled]="isLoadingLocation">
               <i class="bi bi-geo-alt" *ngIf="!isLoadingLocation"></i>
-              <i class="bi bi-arrow-clockwise spin" *ngIf="isLoadingLocation"></i>
-              <span>{{ isLoadingLocation ? 'Detectando...' : 'Mi Ubicación' }}</span>
+              <i class="bi bi-arrow-clockwise spin"
+                *ngIf="isLoadingLocation"></i>
+              <span>{{ isLoadingLocation ? 'Detectando...' : 'Mi Ubicación'
+                }}</span>
             </button>
 
             <button
@@ -343,7 +364,8 @@
               <i class="bi bi-exclamation-triangle-fill"></i>
               <h4>Error cargando el mapa</h4>
               <p>{{ mapError }}</p>
-              <button class="btn primary-btn" (click)="forceMapInitialization()">
+              <button class="btn primary-btn"
+                (click)="forceMapInitialization()">
                 <i class="bi bi-arrow-clockwise"></i>
                 Reintentar
               </button>
@@ -353,11 +375,13 @@
           <!-- Instrucciones del mapa -->
           <div class="map-instructions" *ngIf="isMapReady && !mapError">
             <i class="bi bi-info-circle"></i>
-            <span>Haz clic en el mapa o arrastra el marcador rojo para ajustar la ubicación del incidente</span>
+            <span>Haz clic en el mapa o arrastra el marcador rojo para ajustar
+              la ubicación del incidente</span>
           </div>
 
           <!-- Información adicional -->
-          <div class="map-info-panel" *ngIf="isMapReady && reporte.ubicacion.latitud">
+          <div class="map-info-panel"
+            *ngIf="isMapReady && reporte.ubicacion.latitud">
             <div class="info-item">
               <i class="bi bi-pin-map text-danger"></i>
               <span>Marcador posicionado</span>
@@ -380,7 +404,8 @@
             <strong>Consejos para ubicación precisa:</strong>
           </div>
           <ul class="help-list">
-            <li>Usa el botón "Mi Ubicación" para detectar automáticamente tu posición</li>
+            <li>Usa el botón "Mi Ubicación" para detectar automáticamente tu
+              posición</li>
             <li>Haz clic directamente en el mapa donde ocurrió el incidente</li>
             <li>Arrastra el marcador rojo para ajustar la posición exacta</li>
             <li>Usa los controles de zoom para mayor precisión</li>
@@ -420,7 +445,8 @@
         <div class="fotos-preview" *ngIf="previewUrls.length > 0">
           <h4>Fotos seleccionadas ({{ previewUrls.length }})</h4>
           <div class="fotos-grid">
-            <div class="foto-item" *ngFor="let url of previewUrls; let i = index">
+            <div class="foto-item"
+              *ngFor="let url of previewUrls; let i = index">
               <img [src]="url" [alt]="'Foto ' + (i + 1)">
               <button
                 type="button"
@@ -437,14 +463,14 @@
 
   </main>
 
-  <!-- Botones de navegación -->
+  <!-- Indicador de progreso de envío en el botón -->
   <footer class="form-footer">
     <div class="footer-content">
       <button
         type="button"
         class="btn secondary-btn"
         (click)="previousStep()"
-        *ngIf="currentStep > 1">
+        *ngIf="currentStep > 1 && !isSubmitting">
         <i class="bi bi-arrow-left"></i>
         Anterior
       </button>
@@ -455,7 +481,7 @@
         type="button"
         class="btn primary-btn"
         (click)="nextStep()"
-        *ngIf="currentStep < totalSteps">
+        *ngIf="currentStep < totalSteps && !isSubmitting">
         Siguiente
         <i class="bi bi-arrow-right"></i>
       </button>
@@ -468,8 +494,16 @@
         [disabled]="isSubmitting">
         <i class="bi bi-check-circle" *ngIf="!isSubmitting"></i>
         <i class="bi bi-arrow-clockwise spin" *ngIf="isSubmitting"></i>
-        <span>{{ isSubmitting ? 'Enviando...' : 'Enviar Reporte' }}</span>
+        <span>{{ isSubmitting ? currentUploadStep : 'Enviar Reporte' }}</span>
       </button>
+    </div>
+
+    <!-- Barra de progreso durante el envío -->
+    <div class="upload-progress" *ngIf="isSubmitting">
+      <div class="progress-bar">
+        <div class="progress-fill" [style.width.%]="uploadProgress"></div>
+      </div>
+      <div class="progress-text">{{ currentUploadStep }}</div>
     </div>
 
     <div class="error-message" *ngIf="formErrors.general">
@@ -484,10 +518,13 @@
         <i class="bi bi-check-circle-fill"></i>
       </div>
       <h3>¡Reporte Enviado Exitosamente!</h3>
-      <p>Tu reporte ha sido recibido y será revisado por nuestro equipo. Te notificaremos sobre cualquier actualización.</p>
+      <p>Tu reporte ha sido procesado y enviado al sistema.
+        {{ reporte.esAnonimo ? 'Se ha creado de forma anónima.' :
+        'Se ha asociado a tu perfil.' }}
+        {{ reporte.esImportante ? 'Ha sido marcado como importante.' : '' }}</p>
       <div class="loading-indicator">
         <div class="spinner-small"></div>
-        <span>Redirigiendo a tus reportes...</span>
+        <span>Redirigiendo al dashboard...</span>
       </div>
     </div>
   </div>
