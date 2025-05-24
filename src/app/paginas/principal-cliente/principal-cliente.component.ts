@@ -1,7 +1,9 @@
-import { Component, OnInit, OnDestroy, AfterViewInit } from '@angular/core';
+import { Component, OnInit, OnDestroy, AfterViewInit, NgZone, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { Subject, takeUntil } from 'rxjs';
+import { MapaService, ReporteDTO, Coordenadas } from '../../servicios/mapa.service';
+import { AuthService } from '../../servicios/auth.service';
 
 // Interfaces
 interface Notification {
@@ -19,9 +21,6 @@ interface UserLocation {
   city: string;
 }
 
-// Declaración para Google Maps
-declare let google: any;
-
 @Component({
   selector: 'app-principal-cliente',
   standalone: true,
@@ -31,73 +30,326 @@ declare let google: any;
 })
 export class PrincipalClienteComponent implements OnInit, OnDestroy, AfterViewInit {
   
-  // Datos del usuario (simulados)
+  // Datos del usuario
   userName: string = 'Cliente SegurApp';
-  userCity: string = 'Bogotá, Colombia';
+  userCity: string = 'Pereira, Colombia';
   userLocation: UserLocation | null = null;
   
   // Estados de la UI
   showUserMenu: boolean = false;
   showNotifications: boolean = false;
   isLoadingMap: boolean = true;
+  mapError: string = '';
   
   // Notificaciones
   notifications: Notification[] = [];
   notificationCount: number = 0;
   
-  // Mapa
-  map: any = null;
-  mapMarkers: any[] = [];
+  // Reportes para el mapa
+  reportes: ReporteDTO[] = [];
   
+  // Estilos de mapa disponibles
+  estilosMapas = [
+    { nombre: 'Calles', valor: 'mapbox://styles/mapbox/streets-v12' },
+    { nombre: 'Satélite', valor: 'mapbox://styles/mapbox/satellite-v9' },
+    { nombre: 'Híbrido', valor: 'mapbox://styles/mapbox/satellite-streets-v12' },
+    { nombre: 'Claro', valor: 'mapbox://styles/mapbox/light-v11' },
+    { nombre: 'Oscuro', valor: 'mapbox://styles/mapbox/dark-v11' }
+  ];
+  
+  estiloActual = 0;
   private destroy$ = new Subject<void>();
+  private mapaInicializado = false;
 
-  constructor(private router: Router) {
+  constructor(
+    private router: Router,
+    public mapaService: MapaService, // Hacer público para acceso desde template
+    private authService: AuthService,
+    private ngZone: NgZone,
+    private cdr: ChangeDetectorRef
+  ) {
+    console.log('🏗️ Inicializando PrincipalClienteComponent...');
     this.initializeData();
   }
 
   ngOnInit(): void {
+    console.log('🚀 ngOnInit - Cargando datos iniciales...');
     this.loadUserData();
     this.loadNotifications();
-    this.simulateLocationDetection();
+    this.loadReportesMockData();
+    this.detectUserLocation();
   }
 
   ngAfterViewInit(): void {
-    // Esperar a que Google Maps esté disponible
-    this.waitForGoogleMaps().then(() => {
-      this.initializeMap();
-    }).catch(() => {
-      console.warn('Google Maps no disponible, usando mapa simulado');
-      this.createSimulatedMapFallback();
+    console.log('🔄 ngAfterViewInit - Preparando inicialización del mapa...');
+    
+    // Usar NgZone para optimizar la detección de cambios
+    this.ngZone.runOutsideAngular(() => {
+      // Múltiples timeouts para asegurar que el DOM esté listo
+      setTimeout(() => {
+        this.ngZone.run(() => {
+          this.initializeMapbox();
+        });
+      }, 500);
     });
   }
 
   ngOnDestroy(): void {
+    console.log('💀 ngOnDestroy - Limpiando recursos...');
+    
+    this.mapaService.destruirMapa();
     this.destroy$.next();
     this.destroy$.complete();
+    this.mapaInicializado = false;
   }
 
-  private waitForGoogleMaps(): Promise<void> {
-    return new Promise((resolve, reject) => {
-      let attempts = 0;
-      const maxAttempts = 20;
+  /**
+   * Inicializar Mapbox usando el servicio
+   */
+  private async initializeMapbox(): Promise<void> {
+    console.log('🗺️ Iniciando inicialización de Mapbox...');
+    
+    this.isLoadingMap = true;
+    this.mapError = '';
+    this.cdr.detectChanges();
+    
+    try {
+      // Verificar múltiples veces que el contenedor existe
+      let contenedor = document.getElementById('mapbox-map');
+      let intentos = 0;
+      const maxIntentos = 10;
       
-      const checkGoogleMaps = () => {
-        attempts++;
-        if (typeof google !== 'undefined' && google.maps) {
-          resolve();
-        } else if (attempts < maxAttempts) {
-          setTimeout(checkGoogleMaps, 500);
-        } else {
-          reject('Google Maps no se cargó');
+      while (!contenedor && intentos < maxIntentos) {
+        console.log(`🔍 Intento ${intentos + 1}: Buscando contenedor del mapa...`);
+        await new Promise(resolve => setTimeout(resolve, 200));
+        contenedor = document.getElementById('mapbox-map');
+        intentos++;
+      }
+      
+      if (!contenedor) {
+        throw new Error('Contenedor del mapa no encontrado después de múltiples intentos');
+      }
+
+      console.log('📦 Contenedor del mapa encontrado:', contenedor);
+
+      // Verificar dimensiones del contenedor
+      const rect = contenedor.getBoundingClientRect();
+      console.log('📏 Dimensiones del contenedor:', {
+        width: rect.width,
+        height: rect.height,
+        top: rect.top,
+        left: rect.left
+      });
+
+      if (rect.width === 0 || rect.height === 0) {
+        console.warn('⚠️ El contenedor tiene dimensiones 0, aplicando dimensiones mínimas...');
+        contenedor.style.width = '100%';
+        contenedor.style.height = '400px';
+        contenedor.style.minHeight = '400px';
+        
+        // Esperar un momento después de aplicar estilos
+        await new Promise(resolve => setTimeout(resolve, 300));
+      }
+
+      // Crear mapa usando el servicio
+      console.log('🎯 Creando mapa con MapaService...');
+      await this.mapaService.crearMapa('mapbox-map');
+      
+      console.log('✅ Mapa Mapbox inicializado correctamente');
+      this.mapaInicializado = true;
+      
+      // Cargar reportes en el mapa después de un momento
+      setTimeout(async () => {
+        await this.cargarReportesEnMapa();
+        this.configurarClickListener();
+      }, 1000);
+      
+    } catch (error: any) {
+      console.error('❌ Error inicializando Mapbox:', error);
+      this.mapError = this.getErrorMessage(error);
+      this.mapaInicializado = false;
+    } finally {
+      this.isLoadingMap = false;
+      this.cdr.detectChanges();
+    }
+  }
+
+  /**
+   * Obtener mensaje de error amigable
+   */
+  private getErrorMessage(error: any): string {
+    console.log('🔍 Analizando error:', error);
+    
+    const message = error?.message || error?.toString() || 'Error desconocido';
+    
+    if (message.includes('token') || message.includes('Unauthorized')) {
+      return 'Token de Mapbox no válido. Verifica tu configuración.';
+    } else if (message.includes('network') || message.includes('fetch') || message.includes('NetworkError')) {
+      return 'Error de conexión. Verifica tu conexión a internet.';
+    } else if (message.includes('contenedor') || message.includes('container')) {
+      return 'Error en el contenedor del mapa. Intenta recargar la página.';
+    } else if (message.includes('timeout') || message.includes('Timeout')) {
+      return 'El mapa tardó mucho en cargar. Verifica tu conexión.';
+    } else {
+      return `Error cargando el mapa: ${message}`;
+    }
+  }
+
+  /**
+   * Configurar listener para clicks en el mapa
+   */
+  private configurarClickListener(): void {
+    if (!this.mapaService.estaInicializado()) {
+      console.warn('⚠️ No se puede configurar click listener: mapa no inicializado');
+      return;
+    }
+
+    console.log('👆 Configurando listener de clicks...');
+    
+    this.mapaService.agregarMarcador()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (coordenadas: Coordenadas) => {
+          console.log('📍 Click en mapa detectado:', coordenadas);
+          // Aquí puedes manejar clicks en el mapa si es necesario
+          // Por ejemplo, para crear nuevos reportes
+        },
+        error: (error) => {
+          console.error('❌ Error en click del mapa:', error);
         }
-      };
-      
-      checkGoogleMaps();
-    });
+      });
+  }
+
+  /**
+   * Cargar reportes en el mapa
+   */
+  private async cargarReportesEnMapa(): Promise<void> {
+    if (!this.mapaService.estaInicializado()) {
+      console.warn('⚠️ No se pueden cargar reportes: mapa no inicializado');
+      return;
+    }
+
+    try {
+      if (this.reportes.length > 0) {
+        console.log(`📍 Cargando ${this.reportes.length} reportes en el mapa`);
+        
+        // Pintar marcadores
+        this.mapaService.pintarMarcadores(this.reportes);
+        
+        // Ajustar vista para mostrar todos los reportes después de un momento
+        setTimeout(() => {
+          if (this.mapaService.estaInicializado()) {
+            this.mapaService.ajustarVistaAMarcadores();
+          }
+        }, 2000);
+      } else {
+        console.log('⚠️ No hay reportes para mostrar en el mapa');
+      }
+    } catch (error) {
+      console.error('❌ Error cargando reportes en el mapa:', error);
+    }
+  }
+
+  /**
+   * Cargar datos de ejemplo de reportes con coordenadas válidas
+   */
+  private loadReportesMockData(): void {
+    this.reportes = [
+      {
+        id: '1',
+        titulo: 'Semáforo dañado en Av. Circunvalar',
+        descripcion: 'El semáforo de la intersección Circunvalar con Calle 15 no está funcionando correctamente, causando problemas de tráfico en horas pico.',
+        fecha: new Date().toISOString(),
+        contadorImportante: 3,
+        idUsuario: 'user1',
+        ubicacion: {
+          latitud: 4.8143,
+          longitud: -75.6946
+        },
+        fotos: [],
+        estadoActual: 'PENDIENTE',
+        ciudad: 'PEREIRA',
+        comentarios: [],
+        esAnonimo: false,
+        nombreUsuario: 'Juan Pérez'
+      },
+      {
+        id: '2',
+        titulo: 'Robo a mano armada',
+        descripcion: 'Se reportó un robo a mano armada en esta zona durante la madrugada. Las autoridades ya fueron notificadas.',
+        fecha: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+        contadorImportante: 8,
+        idUsuario: 'user2',
+        ubicacion: {
+          latitud: 4.8093,
+          longitud: -75.6906
+        },
+        fotos: [],
+        estadoActual: 'EN_PROCESO',
+        ciudad: 'PEREIRA',
+        comentarios: [],
+        esAnonimo: false,
+        nombreUsuario: 'María García'
+      },
+      {
+        id: '3',
+        titulo: 'Hueco profundo en Carrera 15',
+        descripcion: 'Hueco profundo en la carrera 15 con calle 18 que puede causar accidentes a los vehículos, especialmente motocicletas.',
+        fecha: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+        contadorImportante: 1,
+        idUsuario: 'user3',
+        ubicacion: {
+          latitud: 4.8113,
+          longitud: -75.6976
+        },
+        fotos: [],
+        estadoActual: 'RESUELTO',
+        ciudad: 'PEREIRA',
+        comentarios: [],
+        esAnonimo: true
+      },
+      {
+        id: '4',
+        titulo: 'Ruido excesivo - Construcción',
+        descripcion: 'Construcción con ruido excesivo en horarios no permitidos (después de las 6 PM), afecta el descanso de los vecinos del sector.',
+        fecha: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
+        contadorImportante: 5,
+        idUsuario: 'user4',
+        ubicacion: {
+          latitud: 4.8163,
+          longitud: -75.6856
+        },
+        fotos: [],
+        estadoActual: 'RECHAZADO',
+        ciudad: 'PEREIRA',
+        comentarios: [],
+        esAnonimo: false,
+        nombreUsuario: 'Carlos López'
+      },
+      {
+        id: '5',
+        titulo: 'Alumbrado público deficiente',
+        descripcion: 'Varias luminarias del sector están fundidas, generando inseguridad durante las horas nocturnas.',
+        fecha: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
+        contadorImportante: 2,
+        idUsuario: 'user5',
+        ubicacion: {
+          latitud: 4.8053,
+          longitud: -75.6926
+        },
+        fotos: [],
+        estadoActual: 'PENDIENTE',
+        ciudad: 'PEREIRA',
+        comentarios: [],
+        esAnonimo: false,
+        nombreUsuario: 'Ana Rodríguez'
+      }
+    ];
+    
+    console.log(`📊 Cargados ${this.reportes.length} reportes de ejemplo con coordenadas válidas`);
   }
 
   private initializeData(): void {
-    // Datos simulados para desarrollo
     this.notifications = [
       {
         id: 1,
@@ -129,318 +381,90 @@ export class PrincipalClienteComponent implements OnInit, OnDestroy, AfterViewIn
   }
 
   private loadUserData(): void {
-    // Verificar si localStorage está disponible
-    if (typeof Storage !== 'undefined') {
-      const userData = localStorage.getItem('user');
-      if (userData) {
-        try {
-          const user = JSON.parse(userData);
-          this.userName = `${user.nombre} ${user.apellido}` || 'Cliente SegurApp';
-        } catch (error) {
-          console.warn('Error parsing user data:', error);
-        }
+    try {
+      const usuario = this.authService.getCurrentUser();
+      if (usuario) {
+        this.userName = usuario.nombre || 'Cliente SegurApp';
       }
+    } catch (error) {
+      console.warn('Error cargando datos del usuario:', error);
     }
     
-    // Ubicación simulada (luego se reemplazará con ubicación real)
     this.userLocation = {
-      lat: 4.6097,
-      lng: -74.0817,
-      city: 'Bogotá, Colombia'
+      lat: 4.8143,
+      lng: -75.6946,
+      city: 'Pereira, Colombia'
     };
-    this.userCity = 'Bogotá, Colombia';
+    this.userCity = 'Pereira, Colombia';
   }
 
   private loadNotifications(): void {
-    // En producción, cargar desde el servicio
-    // this.notificationService.getNotifications().subscribe(...)
-    console.log('Notificaciones cargadas:', this.notifications.length);
+    console.log('📬 Notificaciones cargadas:', this.notifications.length);
   }
 
-  private simulateLocationDetection(): void {
-    // Simular detección de ubicación
-    setTimeout(() => {
-      if (!this.userLocation) {
-        // Ubicación por defecto (Armenia, Quindío)
+  private detectUserLocation(): void {
+    if (!navigator.geolocation) {
+      console.warn('⚠️ Geolocalización no soportada por este navegador');
+      return;
+    }
+
+    console.log('📍 Solicitando ubicación del usuario...');
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
         this.userLocation = {
-          lat: 4.533889,
-          lng: -75.681111,
-          city: 'Armenia'
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+          city: 'Ubicación actual'
         };
-      }
-    }, 2000);
-  }
-
-  private initializeMap(): void {
-    this.isLoadingMap = true;
-    
-    setTimeout(() => {
-      const mapElement = document.getElementById('google-map');
-      if (mapElement && this.userLocation) {
-        if (typeof google !== 'undefined' && google.maps) {
-          this.createRealGoogleMap(mapElement);
-        } else {
-          this.createSimulatedMap(mapElement);
+        console.log('✅ Ubicación del usuario detectada:', this.userLocation);
+        
+        // Centrar mapa en la nueva ubicación si ya está inicializado
+        if (this.mapaService.estaInicializado()) {
+          this.mapaService.centrarMapa([this.userLocation.lng, this.userLocation.lat], 15);
         }
-      }
-      this.isLoadingMap = false;
-    }, 1000);
-  }
-
-  private createRealGoogleMap(element: HTMLElement): void {
-    try {
-      const mapOptions = {
-        center: { lat: this.userLocation!.lat, lng: this.userLocation!.lng },
-        zoom: 15,
-        mapTypeId: google.maps.MapTypeId.ROADMAP,
-        // ESTILOS PARA HACER EL MAPA MÁS CLARO Y LIMPIO
-        styles: [
-          {
-            featureType: 'all',
-            elementType: 'labels.text.fill',
-            stylers: [{ color: '#444444' }]
-          },
-          {
-            featureType: 'landscape',
-            elementType: 'all',
-            stylers: [{ color: '#f2f2f2' }]
-          },
-          {
-            featureType: 'poi',
-            elementType: 'all',
-            stylers: [{ visibility: 'off' }]
-          },
-          {
-            featureType: 'road',
-            elementType: 'all',
-            stylers: [{ saturation: -100 }, { lightness: 45 }]
-          },
-          {
-            featureType: 'road.highway',
-            elementType: 'all',
-            stylers: [{ visibility: 'simplified' }]
-          },
-          {
-            featureType: 'road.arterial',
-            elementType: 'labels.icon',
-            stylers: [{ visibility: 'off' }]
-          },
-          {
-            featureType: 'transit',
-            elementType: 'all',
-            stylers: [{ visibility: 'off' }]
-          },
-          {
-            featureType: 'water',
-            elementType: 'all',
-            stylers: [{ color: '#46bcec' }, { visibility: 'on' }]
-          }
-        ],
-        // CONFIGURACIONES ADICIONALES PARA LIMPIAR EL MAPA
-        disableDefaultUI: false,
-        zoomControl: true,
-        mapTypeControl: true,
-        scaleControl: true,
-        streetViewControl: true,
-        rotateControl: true,
-        fullscreenControl: true,
-        // CONFIGURACIÓN ESPECÍFICA PARA DESARROLLO
-        restriction: {
-          latLngBounds: {
-            north: 12.5,
-            south: -4.5,
-            west: -82,
-            east: -66
-          },
-          strictBounds: false
-        }
-      };
-
-      this.map = new google.maps.Map(element, mapOptions);
-
-      // Añadir marcador de usuario con mejor estilo
-      const userMarker = new google.maps.Marker({
-        position: { lat: this.userLocation!.lat, lng: this.userLocation!.lng },
-        map: this.map,
-        title: 'Tu ubicación',
-        icon: {
-          path: google.maps.SymbolPath.CIRCLE,
-          scale: 10,
-          fillColor: '#4285f4',
-          fillOpacity: 1,
-          strokeColor: '#ffffff',
-          strokeWeight: 3
-        },
-        animation: google.maps.Animation.DROP
-      });
-
-      // Añadir algunos marcadores de ejemplo para reportes
-      this.addSampleReportMarkers();
-
-      console.log('Google Maps inicializado correctamente');
-    } catch (error) {
-      console.error('Error inicializando Google Maps:', error);
-      this.createSimulatedMap(element);
-    }
-  }
-
-  // Método para añadir marcadores de ejemplo
-  private addSampleReportMarkers(): void {
-    if (!this.map || !this.userLocation) return;
-
-    const sampleReports = [
-      {
-        lat: this.userLocation.lat + 0.001,
-        lng: this.userLocation.lng + 0.001,
-        type: 'emergency',
-        title: 'Emergencia reportada',
-        description: 'Accidente de tránsito'
+      },
+      (error) => {
+        console.warn('⚠️ Error obteniendo ubicación:', error.message);
+        // Mantener ubicación por defecto
       },
       {
-        lat: this.userLocation.lat - 0.002,
-        lng: this.userLocation.lng + 0.003,
-        type: 'security',
-        title: 'Problema de seguridad',
-        description: 'Robo reportado'
-      },
-      {
-        lat: this.userLocation.lat + 0.003,
-        lng: this.userLocation.lng - 0.001,
-        type: 'infrastructure',
-        title: 'Problema de infraestructura',
-        description: 'Semáforo dañado'
-      },
-      {
-        lat: this.userLocation.lat - 0.001,
-        lng: this.userLocation.lng - 0.002,
-        type: 'other',
-        title: 'Otro tipo de reporte',
-        description: 'Ruido excesivo'
+        enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 300000
       }
-    ];
-
-    sampleReports.forEach(report => {
-      const marker = new google.maps.Marker({
-        position: { lat: report.lat, lng: report.lng },
-        map: this.map,
-        title: report.title,
-        icon: {
-          path: google.maps.SymbolPath.CIRCLE,
-          scale: 8,
-          fillColor: this.getMarkerColor(report.type),
-          fillOpacity: 0.8,
-          strokeColor: '#ffffff',
-          strokeWeight: 2
-        }
-      });
-
-      // Añadir info window
-      const infoWindow = new google.maps.InfoWindow({
-        content: `
-          <div style="padding: 8px; min-width: 200px;">
-            <h4 style="margin: 0 0 8px 0; color: #333;">${report.title}</h4>
-            <p style="margin: 0; color: #666;">${report.description}</p>
-            <small style="color: #999;">Hace 2 horas</small>
-          </div>
-        `
-      });
-
-      marker.addListener('click', () => {
-        infoWindow.open(this.map, marker);
-      });
-
-      this.mapMarkers.push(marker);
-    });
+    );
   }
 
-  // Método para obtener colores de marcadores según el tipo
-  private getMarkerColor(type: string): string {
-    switch (type) {
-      case 'emergency':
-        return '#ef4444'; // Rojo
-      case 'security':
-        return '#f59e0b'; // Naranja
-      case 'infrastructure':
-        return '#3b82f6'; // Azul
-      default:
-        return '#6b7280'; // Gris
-    }
-  }
-
-  private createSimulatedMap(element: HTMLElement): void {
-    // Crear un mapa simulado para desarrollo
-    element.innerHTML = `
-      <div style="
-        width: 100%; 
-        height: 100%; 
-        background: linear-gradient(45deg, #e6f3e6 25%, transparent 25%), 
-                    linear-gradient(-45deg, #e6f3e6 25%, transparent 25%), 
-                    linear-gradient(45deg, transparent 75%, #e6f3e6 75%), 
-                    linear-gradient(-45deg, transparent 75%, #e6f3e6 75%);
-        background-size: 20px 20px;
-        background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
-        position: relative;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: #4a5568;
-        font-size: 1.2rem;
-        font-weight: 600;
-      ">
-        <div style="
-          background: white;
-          padding: 2rem;
-          border-radius: 1rem;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-          text-align: center;
-        ">
-          <i class="bi bi-geo-alt-fill" style="font-size: 2rem; color: #ef4444; margin-bottom: 1rem; display: block;"></i>
-          <div>Mapa de ${this.userCity}</div>
-          <div style="font-size: 0.9rem; color: #6b7280; margin-top: 0.5rem;">
-            Vista simulada para desarrollo
-          </div>
-        </div>
-      </div>
-    `;
-    
-    console.log('Mapa simulado creado para:', this.userCity);
-  }
-
-  private createSimulatedMapFallback(): void {
-    this.isLoadingMap = false;
-    setTimeout(() => {
-      const mapElement = document.getElementById('google-map');
-      if (mapElement) {
-        this.createSimulatedMap(mapElement);
-      }
-    }, 100);
-  }
-
-  // Métodos de navegación
+  // === MÉTODOS DE NAVEGACIÓN ===
   goToReportes(): void {
+    console.log('🧭 Navegando a reportes...');
     this.router.navigate(['/mis-reportes']);
   }
 
   goToReportar(): void {
+    console.log('🧭 Navegando a crear reporte...');
     this.router.navigate(['/crear-reporte']);
   }
 
   goToMisReportes(): void {
+    console.log('🧭 Navegando a mis reportes...');
     this.router.navigate(['/mis-reportes']);
   }
 
   goToProfile(): void {
     this.closeAllMenus();
+    console.log('🧭 Navegando a perfil...');
     this.router.navigate(['/perfil-cliente']);
   }
 
   goToSettings(): void {
     this.closeAllMenus();
-    // Implementar navegación a configuración
-    console.log('Navegando a configuración...');
+    console.log('🧭 Navegando a configuración...');
+    // this.router.navigate(['/configuracion']);
   }
 
-  // Métodos de UI
+  // === MÉTODOS DE UI ===
   toggleUserMenu(): void {
     this.showUserMenu = !this.showUserMenu;
     if (this.showUserMenu) {
@@ -452,7 +476,6 @@ export class PrincipalClienteComponent implements OnInit, OnDestroy, AfterViewIn
     this.showNotifications = !this.showNotifications;
     if (this.showNotifications) {
       this.showUserMenu = false;
-      // Marcar notificaciones como leídas
       this.markNotificationsAsRead();
     }
   }
@@ -475,115 +498,158 @@ export class PrincipalClienteComponent implements OnInit, OnDestroy, AfterViewIn
     this.notificationCount = 0;
   }
 
-  // Métodos del mapa
+  // === MÉTODOS DEL MAPA ===
   centerMap(): void {
-    console.log('Centrando mapa en ubicación del usuario...');
-    if (this.map && this.userLocation) {
-      try {
-        this.map.setCenter({ lat: this.userLocation.lat, lng: this.userLocation.lng });
-        this.map.setZoom(16);
-      } catch (error) {
-        console.warn('Error centrando mapa:', error);
-      }
+    console.log('🎯 Centrando mapa en ubicación del usuario...');
+    
+    if (!this.mapaService.estaInicializado()) {
+      console.warn('⚠️ No se puede centrar el mapa: mapa no inicializado');
+      return;
+    }
+    
+    if (this.userLocation) {
+      this.mapaService.centrarMapa([this.userLocation.lng, this.userLocation.lat], 16);
+    } else {
+      console.warn('⚠️ No se puede centrar el mapa: ubicación no disponible');
+      // Usar ubicación por defecto
+      this.mapaService.centrarMapa([-75.6946, 4.8143], 14);
     }
   }
 
   toggleMapType(): void {
-    console.log('Cambiando tipo de vista del mapa...');
-    if (this.map && typeof google !== 'undefined') {
-      try {
-        const currentType = this.map.getMapTypeId();
-        const newType = currentType === google.maps.MapTypeId.ROADMAP 
-          ? google.maps.MapTypeId.SATELLITE 
-          : google.maps.MapTypeId.ROADMAP;
-        this.map.setMapTypeId(newType);
-      } catch (error) {
-        console.warn('Error cambiando tipo de mapa:', error);
-      }
+    console.log('🗺️ Cambiando estilo del mapa...');
+    
+    if (!this.mapaService.estaInicializado()) {
+      console.warn('⚠️ Mapa no inicializado para cambiar estilo');
+      return;
     }
+    
+    this.estiloActual = (this.estiloActual + 1) % this.estilosMapas.length;
+    const nuevoEstilo = this.estilosMapas[this.estiloActual];
+    
+    this.mapaService.cambiarEstiloMapa(nuevoEstilo.valor);
+    console.log(`✅ Mapa cambiado a estilo: ${nuevoEstilo.nombre}`);
   }
 
-  refreshReports(): void {
-    console.log('Actualizando reportes en el mapa...');
-    // Limpiar marcadores existentes
-    this.mapMarkers.forEach(marker => {
-      marker.setMap(null);
-    });
-    this.mapMarkers = [];
+  async refreshReports(): Promise<void> {
+    console.log('🔄 Actualizando reportes en el mapa...');
     
-    // Volver a cargar marcadores
-    if (this.map) {
-      this.addSampleReportMarkers();
+    if (!this.mapaService.estaInicializado()) {
+      console.warn('⚠️ Mapa no inicializado para actualizar reportes');
+      return;
+    }
+    
+    this.isLoadingMap = true;
+    this.cdr.detectChanges();
+    
+    try {
+      // Limpiar marcadores existentes
+      this.mapaService.limpiarMarcadores();
+      
+      // Simular carga de nuevos datos
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // En producción, hacer petición al backend para obtener reportes actualizados
+      this.loadReportesMockData();
+      await this.cargarReportesEnMapa();
+      
+      console.log('✅ Reportes actualizados exitosamente');
+    } catch (error) {
+      console.error('❌ Error actualizando reportes:', error);
+    } finally {
+      this.isLoadingMap = false;
+      this.cdr.detectChanges();
     }
   }
 
   requestLocation(): void {
-    console.log('Solicitando permisos de ubicación...');
-    
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          this.userLocation = {
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-            city: 'Ubicación actual'
-          };
-          this.initializeMap();
-        },
-        (error) => {
-          console.error('Error obteniendo ubicación:', error);
-          // Usar ubicación por defecto
-          this.userLocation = {
-            lat: 4.533889,
-            lng: -75.681111,
-            city: 'Armenia'
-          };
-          this.initializeMap();
-        }
-      );
-    }
+    console.log('📍 Solicitando permisos de ubicación...');
+    this.detectUserLocation();
   }
 
-  // Métodos de utilidad
+  /**
+   * Reintentar inicializar el mapa
+   */
+  retryMapInitialization(): void {
+    console.log('🔄 Reintentando inicializar mapa...');
+    this.mapError = '';
+    this.mapaInicializado = false;
+    this.initializeMapbox();
+  }
+
+  // === MÉTODOS DE UTILIDAD ===
   getNotificationIcon(type: string): string {
     switch (type) {
-      case 'info':
-        return 'bi bi-info-circle';
-      case 'success':
-        return 'bi bi-check-circle';
-      case 'warning':
-        return 'bi bi-exclamation-triangle';
-      case 'error':
-        return 'bi bi-x-circle';
-      default:
-        return 'bi bi-bell';
+      case 'info': return 'bi bi-info-circle';
+      case 'success': return 'bi bi-check-circle';
+      case 'warning': return 'bi bi-exclamation-triangle';
+      case 'error': return 'bi bi-x-circle';
+      default: return 'bi bi-bell';
     }
   }
 
   logout(): void {
-    // Limpiar datos del usuario
-    if (typeof Storage !== 'undefined') {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-    }
+    console.log('👋 Cerrando sesión...');
     
-    // Navegar al login
-    this.router.navigate(['/login']);
-    console.log('Usuario desconectado');
+    try {
+      this.mapaService.destruirMapa();
+      this.authService.logout();
+      this.router.navigate(['/home']);
+    } catch (error) {
+      console.error('Error durante logout:', error);
+      // Navegar de todas formas
+      this.router.navigate(['/home']);
+    }
   }
 
-  // Métodos para desarrollo/testing
-  addTestNotification(): void {
-    const testNotification: Notification = {
-      id: Date.now(),
-      type: 'info',
-      title: 'Notificación de prueba',
-      message: 'Esta es una notificación de prueba para verificar el funcionamiento.',
-      time: 'Ahora',
-      read: false
-    };
+  // === MÉTODOS DE FILTRADO DE REPORTES ===
+  filtrarReportesPorEstado(estado: string): void {
+    console.log(`🔍 Filtrando reportes por estado: ${estado}`);
     
-    this.notifications.unshift(testNotification);
-    this.notificationCount++;
+    if (!this.mapaService.estaInicializado()) {
+      console.warn('⚠️ Mapa no inicializado para filtrar');
+      return;
+    }
+    
+    const reportesFiltrados = this.reportes.filter(r => r.estadoActual === estado);
+    console.log(`📊 Reportes filtrados: ${reportesFiltrados.length}/${this.reportes.length}`);
+    
+    this.mapaService.limpiarMarcadores();
+    
+    if (reportesFiltrados.length > 0) {
+      this.mapaService.pintarMarcadores(reportesFiltrados);
+      
+      setTimeout(() => {
+        if (this.mapaService.estaInicializado()) {
+          this.mapaService.ajustarVistaAMarcadores();
+        }
+      }, 500);
+    }
+  }
+
+  mostrarTodosLosReportes(): void {
+    console.log('📍 Mostrando todos los reportes');
+    
+    if (!this.mapaService.estaInicializado()) {
+      console.warn('⚠️ Mapa no inicializado para mostrar todos los reportes');
+      return;
+    }
+    
+    this.mapaService.limpiarMarcadores();
+    this.cargarReportesEnMapa();
+  }
+
+  /**
+   * Método para debugging - obtener información del mapa
+   */
+  debugMapInfo(): void {
+    const info = this.mapaService.obtenerInfoMapa();
+    console.log('🐛 Información del mapa:', info);
+    console.log('🐛 Estado del componente:', {
+      isLoadingMap: this.isLoadingMap,
+      mapError: this.mapError,
+      mapaInicializado: this.mapaInicializado,
+      reportes: this.reportes.length
+    });
   }
 }

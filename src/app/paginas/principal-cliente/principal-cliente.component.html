@@ -85,37 +85,86 @@
       <div class="map-header">
         <h2 class="map-title">Mapa de Reportes - {{ userCity }}</h2>
         <div class="map-controls">
-          <button class="control-btn" (click)="centerMap()" [title]="'Centrar en mi ubicación'">
+          <button 
+            class="control-btn" 
+            (click)="centerMap()" 
+            [title]="'Centrar en mi ubicación'" 
+            [disabled]="!mapaService.estaInicializado()">
             <i class="bi bi-geo-alt"></i>
           </button>
-          <button class="control-btn" (click)="toggleMapType()" [title]="'Cambiar vista del mapa'">
+          <button 
+            class="control-btn" 
+            (click)="toggleMapType()" 
+            [title]="'Cambiar estilo del mapa'" 
+            [disabled]="!mapaService.estaInicializado()">
             <i class="bi bi-layers"></i>
           </button>
-          <button class="control-btn" (click)="refreshReports()" [title]="'Actualizar reportes'">
-            <i class="bi bi-arrow-clockwise"></i>
+          <button 
+            class="control-btn" 
+            (click)="refreshReports()" 
+            [title]="'Actualizar reportes'" 
+            [disabled]="isLoadingMap || !mapaService.estaInicializado()">
+            <i class="bi bi-arrow-clockwise" [class.spinning]="isLoadingMap"></i>
+          </button>
+          <!-- Botón de debug (remover en producción) -->
+          <button 
+            class="control-btn debug-btn" 
+            (click)="debugMapInfo()" 
+            [title]="'Debug Map Info'"
+            style="background: #ef4444; color: white;">
+            <i class="bi bi-bug"></i>
           </button>
         </div>
       </div>
       
-      <!-- Mapa de Google Maps -->
+      <!-- Mapa de Mapbox -->
       <div class="map-wrapper">
-        <div id="google-map" class="google-map"></div>
+        <!-- Contenedor del mapa Mapbox -->
+        <div 
+          id="mapbox-map" 
+          class="mapbox-map" 
+          [style.display]="mapError ? 'none' : 'block'"
+          [style.width]="'100%'"
+          [style.height]="'100%'"
+          [style.min-height]="'400px'">
+        </div>
         
         <!-- Overlay de carga del mapa -->
-        <div class="map-loading" *ngIf="isLoadingMap">
+        <div class="map-loading" *ngIf="isLoadingMap && !mapError">
           <div class="loading-content">
             <div class="spinner"></div>
             <p>Cargando mapa...</p>
+            <small>Conectando con Mapbox...</small>
+          </div>
+        </div>
+
+        <!-- Mensaje de error del mapa -->
+        <div class="map-error" *ngIf="mapError">
+          <div class="error-content">
+            <i class="bi bi-exclamation-triangle-fill"></i>
+            <h3>Error cargando el mapa</h3>
+            <p>{{ mapError }}</p>
+            <div class="error-actions">
+              <button class="btn primary-btn" (click)="retryMapInitialization()">
+                <i class="bi bi-arrow-clockwise"></i>
+                Reintentar
+              </button>
+              <button class="btn secondary-btn" (click)="debugMapInfo()">
+                <i class="bi bi-info-circle"></i>
+                Ver detalles
+              </button>
+            </div>
           </div>
         </div>
         
         <!-- Mensaje si no hay ubicación -->
-        <div class="no-location-message" *ngIf="!userLocation && !isLoadingMap">
+        <div class="no-location-message" *ngIf="!userLocation && !isLoadingMap && !mapError">
           <div class="message-content">
             <i class="bi bi-geo-alt-fill"></i>
             <h3>Ubicación no disponible</h3>
             <p>Permite el acceso a tu ubicación para ver el mapa personalizado</p>
             <button class="btn primary-btn" (click)="requestLocation()">
+              <i class="bi bi-geo-alt"></i>
               Permitir Ubicación
             </button>
           </div>
@@ -123,25 +172,57 @@
       </div>
       
       <!-- Leyenda del mapa -->
-      <div class="map-legend">
-        <h4>Tipos de Reportes</h4>
+      <div class="map-legend" *ngIf="!mapError">
+        <h4>Estados de Reportes</h4>
         <div class="legend-items">
           <div class="legend-item">
-            <div class="legend-marker emergency"></div>
-            <span>Emergencia</span>
+            <div class="legend-marker pendiente"></div>
+            <span>Pendiente</span>
           </div>
           <div class="legend-item">
-            <div class="legend-marker security"></div>
-            <span>Seguridad</span>
+            <div class="legend-marker en-proceso"></div>
+            <span>En Proceso</span>
           </div>
           <div class="legend-item">
-            <div class="legend-marker infrastructure"></div>
-            <span>Infraestructura</span>
+            <div class="legend-marker resuelto"></div>
+            <span>Resuelto</span>
           </div>
           <div class="legend-item">
-            <div class="legend-marker other"></div>
-            <span>Otros</span>
+            <div class="legend-marker rechazado"></div>
+            <span>Rechazado</span>
           </div>
+        </div>
+        
+        <!-- Botones de filtro -->
+        <div class="legend-filters">
+          <button 
+            class="filter-btn active" 
+            (click)="mostrarTodosLosReportes()" 
+            [disabled]="!mapaService.estaInicializado()">
+            <i class="bi bi-eye"></i> Todos
+          </button>
+          <button 
+            class="filter-btn" 
+            (click)="filtrarReportesPorEstado('PENDIENTE')" 
+            [disabled]="!mapaService.estaInicializado()">
+            <i class="bi bi-clock"></i> Pendientes
+          </button>
+        </div>
+      </div>
+      
+      <!-- Información de reportes -->
+      <div class="map-info" *ngIf="!mapError">
+        <div class="info-item">
+          <i class="bi bi-pin-map"></i>
+          <span>{{ reportes.length }} reportes</span>
+        </div>
+        <div class="info-item">
+          <i class="bi bi-geo-alt"></i>
+          <span>{{ userCity }}</span>
+        </div>
+        <div class="info-item" *ngIf="mapaService.estaInicializado()">
+          <i class="bi bi-check-circle text-success"></i>
+          <span>Mapa activo</span>
         </div>
       </div>
     </section>
