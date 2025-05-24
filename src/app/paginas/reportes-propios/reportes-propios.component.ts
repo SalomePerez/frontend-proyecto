@@ -251,6 +251,7 @@ export class ReportesPropiosComponent implements OnInit, OnDestroy {
     this.router.navigate(['/crear-reporte']);
   }
 
+  // ✅ MÉTODO CLAVE: Navegar al detalle usando el componente existente
   verDetalleReporte(reporteId: number): void {
     this.router.navigate(['/detalle-reporte'], { queryParams: { id: reporteId } });
   }

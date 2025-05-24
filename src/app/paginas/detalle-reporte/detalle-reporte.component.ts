@@ -21,6 +21,7 @@ interface Reporte {
   };
   imagenes?: string[];
   comentariosAdmin?: string;
+  esPropio?: boolean;
   detallesAdicionales?: {
     telefono?: string;
     email?: string;
@@ -43,12 +44,12 @@ export class DetalleReporteComponent implements OnInit, OnDestroy {
   reporteId: number | null = null;
   userName: string = 'Cliente SegurApp';
   
-  // Datos simulados de reportes (en producción vendría de un servicio)
+  // ✅ DATOS SINCRONIZADOS CON reportes-propios.component.ts
   private reportesData: Reporte[] = [
     {
       id: 1,
-      titulo: 'Robo en la calle 45',
-      descripcion: 'Se presentó un robo a mano armada en la calle 45 con carrera 12. Los delincuentes se movilizaban en motocicleta de color negro, eran dos personas con cascos integrales. Sustrajeron un celular y una billetera. El incidente ocurrió aproximadamente a las 10:30 AM cuando la víctima se dirigía a su trabajo.',
+      titulo: 'Robo en mi cuadra',
+      descripcion: 'Vi un robo a mano armada en la calle 45 con carrera 12. Los delincuentes se movilizaban en motocicleta negra, eran dos personas, una conducía y la otra amenazó con un arma de fuego a una señora que caminaba por la acera. Le quitaron el bolso y el celular. Todo ocurrió aproximadamente a las 8:30 PM. La señora gritó pidiendo ayuda pero cuando salimos ya se habían ido. Llamamos inmediatamente a la policía.',
       categoria: 'seguridad',
       estado: 'en_proceso',
       prioridad: 'alta',
@@ -59,8 +60,9 @@ export class DetalleReporteComponent implements OnInit, OnDestroy {
         lat: 4.6097,
         lng: -74.0817
       },
-      imagenes: ['assets/reporte1.jpg', 'assets/reporte1-2.jpg'],
-      comentariosAdmin: 'Se ha enviado patrulla al área. Caso bajo investigación. Se han revisado las cámaras de seguridad de la zona.',
+      imagenes: ['assets/reporte1.jpg'],
+      comentariosAdmin: 'Se ha enviado patrulla al área. Caso bajo investigación.',
+      esPropio: true,
       detallesAdicionales: {
         telefono: '300-123-4567',
         email: 'usuario@email.com',
@@ -69,52 +71,9 @@ export class DetalleReporteComponent implements OnInit, OnDestroy {
       }
     },
     {
-      id: 2,
-      titulo: 'Semáforo dañado',
-      descripcion: 'El semáforo de la intersección está completamente apagado, causando congestión vehicular y poniendo en riesgo la seguridad de los peatones y conductores.',
-      categoria: 'infraestructura',
-      estado: 'resuelto',
-      prioridad: 'media',
-      fechaCreacion: '2024-01-14T08:15:00',
-      fechaActualizacion: '2024-01-15T16:45:00',
-      ubicacion: {
-        direccion: 'Carrera 15 con Calle 72, Bogotá',
-        lat: 4.6097,
-        lng: -74.0817
-      },
-      comentariosAdmin: 'Semáforo reparado el 15/01/2024. Funcionando correctamente. Se realizó mantenimiento preventivo.',
-      detallesAdicionales: {
-        telefono: '300-987-6543',
-        email: 'usuario2@email.com',
-        evidencias: ['Fotografía del semáforo dañado', 'Reporte técnico']
-      }
-    },
-    {
-      id: 3,
-      titulo: 'Accidente de tránsito',
-      descripcion: 'Colisión entre dos vehículos particulares. Se requiere presencia de tránsito y ambulancia. Hay heridos leves.',
-      categoria: 'emergencia',
-      estado: 'resuelto',
-      prioridad: 'critica',
-      fechaCreacion: '2024-01-13T16:22:00',
-      fechaActualizacion: '2024-01-13T17:30:00',
-      ubicacion: {
-        direccion: 'Autopista Norte Km 5, Bogotá',
-        lat: 4.6097,
-        lng: -74.0817
-      },
-      comentariosAdmin: 'Atendido por servicios de emergencia. Vía despejada. Heridos trasladados al hospital.',
-      detallesAdicionales: {
-        telefono: '300-555-1234',
-        email: 'testigo@email.com',
-        testigos: ['Carlos Rodríguez (Conductor testigo)', 'Ana López (Peatón)'],
-        evidencias: ['Fotografías del accidente', 'Parte policial', 'Reporte médico']
-      }
-    },
-    {
       id: 4,
-      titulo: 'Ruido excesivo',
-      descripcion: 'Establecimiento comercial con música a alto volumen durante horas no permitidas, afectando el descanso de los residentes.',
+      titulo: 'Ruido excesivo del bar',
+      descripcion: 'El bar de mi cuadra tiene música muy alta todas las noches después de las 11 PM, violando las normas de ruido establecidas por la alcaldía. Esto viene sucediendo desde hace aproximadamente 3 semanas. He intentado hablar con el dueño pero no ha dado resultado. La música se extiende hasta altas horas de la madrugada (2-3 AM) afectando el descanso de todos los vecinos, especialmente de los niños y personas mayores del sector.',
       categoria: 'otros',
       estado: 'pendiente',
       prioridad: 'baja',
@@ -125,10 +84,78 @@ export class DetalleReporteComponent implements OnInit, OnDestroy {
         lat: 4.6097,
         lng: -74.0817
       },
+      esPropio: true,
       detallesAdicionales: {
         telefono: '300-111-2222',
         email: 'vecino@email.com',
         evidencias: ['Audio grabado', 'Fotografía del establecimiento']
+      }
+    },
+    {
+      id: 8,
+      titulo: 'Hueco peligroso en la vía',
+      descripcion: 'Hay un hueco muy grande en la carrera 15 que está causando accidentes de motocicletas y daños a vehículos. El hueco tiene aproximadamente 80 cm de diámetro y 30 cm de profundidad. Se formó después de las lluvias de la semana pasada. Ya he visto al menos 3 motociclistas que han tenido problemas al pasar por ahí, uno de ellos se cayó y se lastimó el brazo. Es urgente que se repare antes de que ocurra un accidente más grave.',
+      categoria: 'infraestructura',
+      estado: 'pendiente',
+      prioridad: 'media',
+      fechaCreacion: '2024-01-17T08:15:00',
+      fechaActualizacion: '2024-01-17T08:15:00',
+      ubicacion: {
+        direccion: 'Carrera 15 # 34-45, Bogotá',
+        lat: 4.6097,
+        lng: -74.0817
+      },
+      esPropio: true,
+      detallesAdicionales: {
+        telefono: '300-987-6543',
+        email: 'usuario3@email.com',
+        evidencias: ['Fotografía del hueco', 'Video del incidente']
+      }
+    },
+    {
+      id: 12,
+      titulo: 'Peligro: Cables eléctricos sueltos',
+      descripcion: 'Cables de alta tensión colgando peligrosamente sobre la calle después de la tormenta de ayer. Los cables están aproximadamente a 3 metros del suelo, lo que representa un grave peligro para peatones y vehículos altos. Se pueden ver chispas ocasionales cuando el viento los mueve. La situación es muy peligrosa y requiere atención inmediata de la empresa de energía.',
+      categoria: 'emergencia',
+      estado: 'resuelto',
+      prioridad: 'critica',
+      fechaCreacion: '2024-01-10T15:45:00',
+      fechaActualizacion: '2024-01-11T09:30:00',
+      ubicacion: {
+        direccion: 'Avenida 68 # 45-12, Bogotá',
+        lat: 4.6097,
+        lng: -74.0817
+      },
+      comentariosAdmin: 'Cuadrilla de la empresa eléctrica reparó los cables. Peligro neutralizado.',
+      esPropio: true,
+      detallesAdicionales: {
+        telefono: '300-555-1234',
+        email: 'usuario4@email.com',
+        testigos: ['Carlos Rodríguez (Vecino)', 'Ana López (Transeúnte)'],
+        evidencias: ['Fotografía de los cables', 'Reporte técnico de la empresa eléctrica']
+      }
+    },
+    {
+      id: 15,
+      titulo: 'Intento de robo a mi vehículo',
+      descripcion: 'Intentaron robar mi carro en el parqueadero del supermercado. Los ladrones huyeron cuando llegué. Encontré la ventana del conductor rota y evidencia de que intentaron forzar la ignición. El incidente ocurrió el sábado en la tarde, aproximadamente a las 4 PM. El centro comercial tiene cámaras de seguridad que podrían haber grabado el incidente. También hay testigos que vieron a dos sujetos sospechosos rondando los vehículos.',
+      categoria: 'seguridad',
+      estado: 'rechazado',
+      prioridad: 'alta',
+      fechaCreacion: '2024-01-09T19:20:00',
+      fechaActualizacion: '2024-01-12T11:15:00',
+      ubicacion: {
+        direccion: 'Centro Comercial Andino, Bogotá',
+        lat: 4.6097,
+        lng: -74.0817
+      },
+      comentariosAdmin: 'No se encontró evidencia suficiente para proceder. Se recomienda instalar cámaras.',
+      esPropio: true,
+      detallesAdicionales: {
+        telefono: '300-777-8888',
+        email: 'usuario5@email.com',
+        testigos: ['Pedro Martínez (Vigilante)', 'Laura Sánchez (Cliente)'],
+        evidencias: ['Fotografía del vehículo dañado', 'Video de cámaras de seguridad']
       }
     }
   ];
@@ -150,7 +177,7 @@ export class DetalleReporteComponent implements OnInit, OnDestroy {
         if (this.reporteId) {
           this.loadReporteDetalle();
         } else {
-          this.router.navigate(['/mis-reportes']);
+          this.router.navigate(['/reportes-propios']); // ✅ Cambié la navegación de regreso
         }
       });
   }
@@ -183,7 +210,7 @@ export class DetalleReporteComponent implements OnInit, OnDestroy {
       
       if (!this.reporte) {
         console.error('Reporte no encontrado');
-        this.router.navigate(['/mis-reportes']);
+        this.router.navigate(['/reportes-propios']); // ✅ Cambié la navegación de regreso
         return;
       }
       
@@ -193,7 +220,7 @@ export class DetalleReporteComponent implements OnInit, OnDestroy {
 
   // Métodos de navegación
   goBack(): void {
-    this.router.navigate(['/mis-reportes']);
+    this.router.navigate(['/reportes-propios']); // ✅ Cambié la navegación de regreso
   }
 
   editarReporte(): void {
@@ -324,6 +351,10 @@ export class DetalleReporteComponent implements OnInit, OnDestroy {
     } else {
       return 'Hace un momento';
     }
+  }
+
+  verDetalleReporte(reporteId: number): void {
+    this.router.navigate(['/detalle-reporte'], { queryParams: { id: reporteId } });
   }
 
   // Método para abrir ubicación en Google Maps

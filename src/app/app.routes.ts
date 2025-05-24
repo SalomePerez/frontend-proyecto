@@ -78,7 +78,7 @@ export const routes: Routes = [
     canActivate: [AuthGuard],
     data: { role: 'CLIENTE' }
   },
-  
+
   // ===== RUTA WILDCARD (DEBE IR AL FINAL) =====
   { path: '**', redirectTo: '/home' }
 ];
