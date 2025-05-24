@@ -9,9 +9,10 @@
     </div>
     
     <div class="navbar-right">
-      <!-- Ícono de reportes -->
-      <button class="nav-icon-btn" [title]="'Mis Reportes'" (click)="goToMisReportes()">
+      <!-- Ícono de reportes PROPIOS - MODIFICADO -->
+      <button class="nav-icon-btn" [title]="'Mis Reportes Propios'" (click)="goToReportesPropios()">
         <i class="bi bi-file-earmark-text"></i>
+        <span class="nav-label">Mis Reportes</span>
       </button>
       
       <!-- Ícono de notificaciones -->
@@ -58,7 +59,7 @@
         <button class="sidebar-btn reportes-btn" (click)="goToReportes()">
           <div class="btn-content">
             <i class="bi bi-folder"></i>
-            <span>Reportes</span>
+            <span>Ver Reportes</span>
           </div>
         </button>
 

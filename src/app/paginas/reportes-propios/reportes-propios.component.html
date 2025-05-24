@@ -1,0 +1,228 @@
+<div class="reportes-propios-container">
+  <!-- Header -->
+  <header class="page-header">
+    <div class="header-left">
+      <button class="back-btn" (click)="goBack()" title="Volver al dashboard">
+        <i class="bi bi-arrow-left"></i>
+      </button>
+      <div class="page-title-section">
+        <h1 class="page-title">Mis Reportes Creados</h1>
+        <p class="page-subtitle">Administra los reportes que has enviado</p>
+      </div>
+    </div>
+    <div class="header-right">
+      <button class="btn primary-btn nuevo-reporte-btn" (click)="crearNuevoReporte()">
+        <i class="bi bi-plus-circle"></i>
+        <span>Crear Reporte</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Estadísticas -->
+  <section class="estadisticas-section">
+    <div class="estadisticas-grid">
+      <div class="estadistica-card total">
+        <div class="estadistica-icon">
+          <i class="bi bi-person-check"></i>
+        </div>
+        <div class="estadistica-info">
+          <h3>{{ estadisticas.total }}</h3>
+          <p>Mis Reportes</p>
+        </div>
+      </div>
+      
+      <div class="estadistica-card pendientes">
+        <div class="estadistica-icon">
+          <i class="bi bi-clock"></i>
+        </div>
+        <div class="estadistica-info">
+          <h3>{{ estadisticas.pendientes }}</h3>
+          <p>Pendientes</p>
+        </div>
+      </div>
+      
+      <div class="estadistica-card proceso">
+        <div class="estadistica-icon">
+          <i class="bi bi-gear"></i>
+        </div>
+        <div class="estadistica-info">
+          <h3>{{ estadisticas.enProceso }}</h3>
+          <p>En Proceso</p>
+        </div>
+      </div>
+      
+      <div class="estadistica-card resueltos">
+        <div class="estadistica-icon">
+          <i class="bi bi-check-circle"></i>
+        </div>
+        <div class="estadistica-info">
+          <h3>{{ estadisticas.resueltos }}</h3>
+          <p>Resueltos</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Filtros y búsqueda -->
+  <section class="filtros-section">
+    <div class="filtros-container">
+      <div class="filtros-left">
+        <div class="filtro-grupo">
+          <label>Estado:</label>
+          <select class="filtro-select" [value]="selectedFilter" (change)="onFilterChange($event)">
+            <option value="todos">Todos los estados</option>
+            <option value="pendiente">Pendientes</option>
+            <option value="en_proceso">En Proceso</option>
+            <option value="resuelto">Resueltos</option>
+            <option value="rechazado">Rechazados</option>
+          </select>
+        </div>
+        
+        <div class="filtro-grupo">
+          <label>Categoría:</label>
+          <select class="filtro-select" [value]="selectedCategory" (change)="onCategoryChange($event)">
+            <option value="todas">Todas las categorías</option>
+            <option value="emergencia">Emergencia</option>
+            <option value="seguridad">Seguridad</option>
+            <option value="infraestructura">Infraestructura</option>
+            <option value="otros">Otros</option>
+          </select>
+        </div>
+      </div>
+      
+      <div class="filtros-right">
+        <div class="busqueda-container">
+          <i class="bi bi-search busqueda-icon"></i>
+          <input 
+            type="text" 
+            class="busqueda-input" 
+            placeholder="Buscar en mis reportes..."
+            [value]="searchTerm"
+            (input)="onSearchChange($event)"
+          >
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Lista de reportes -->
+  <section class="reportes-section">
+    <!-- Loading -->
+    <div class="loading-container" *ngIf="isLoading">
+      <div class="loading-content">
+        <div class="spinner"></div>
+        <p>Cargando tus reportes...</p>
+      </div>
+    </div>
+
+    <!-- Lista de reportes -->
+    <div class="reportes-grid" *ngIf="!isLoading">
+      <!-- Mensaje si no hay reportes -->
+      <div class="no-reportes-message" *ngIf="reportesFiltrados.length === 0">
+        <div class="no-reportes-content">
+          <i class="bi bi-person-x"></i>
+          <h3 *ngIf="selectedFilter === 'todos' && !searchTerm">¡Aún no has creado reportes!</h3>
+          <h3 *ngIf="selectedFilter !== 'todos' || searchTerm">No hay reportes que coincidan</h3>
+          <p *ngIf="selectedFilter === 'todos' && !searchTerm">
+            Crear reportes te ayuda a mantener tu comunidad segura e informada.
+          </p>
+          <p *ngIf="selectedFilter !== 'todos' || searchTerm">
+            Intenta cambiar los filtros de búsqueda para encontrar tus reportes.
+          </p>
+          <button class="btn primary-btn" (click)="crearNuevoReporte()" *ngIf="selectedFilter === 'todos' && !searchTerm">
+            <i class="bi bi-plus-circle"></i>
+            Crear Mi Primer Reporte
+          </button>
+        </div>
+      </div>
+
+      <!-- Cards de reportes -->
+      <div class="reporte-card" *ngFor="let reporte of reportesFiltrados">
+        <!-- Badge "MI REPORTE" -->
+        <div class="mi-reporte-badge">
+          <i class="bi bi-person-check"></i>
+          <span>MI REPORTE</span>
+        </div>
+
+        <div class="reporte-header">
+          <div class="reporte-categoria">
+            <i [class]="getCategoriaIcon(reporte.categoria)" [style.color]="getCategoriaColor(reporte.categoria)"></i>
+            <span class="categoria-text">{{ reporte.categoria | titlecase }}</span>
+          </div>
+          <div class="reporte-estado" [class]="getEstadoClass(reporte.estado)">
+            {{ getEstadoTexto(reporte.estado) }}
+          </div>
+        </div>
+
+        <div class="reporte-body">
+          <h3 class="reporte-titulo">{{ reporte.titulo }}</h3>
+          <p class="reporte-descripcion">{{ reporte.descripcion }}</p>
+          
+          <div class="reporte-ubicacion">
+            <i class="bi bi-geo-alt"></i>
+            <span>{{ reporte.ubicacion.direccion }}</span>
+          </div>
+
+          <div class="reporte-meta">
+            <div class="meta-item">
+              <i class="bi bi-calendar"></i>
+              <span>{{ formatFecha(reporte.fechaCreacion) }}</span>
+            </div>
+            <div class="meta-item">
+              <i class="bi bi-clock"></i>
+              <span>{{ getTiempoTranscurrido(reporte.fechaCreacion) }}</span>
+            </div>
+            <div class="meta-item prioridad" [class]="getPrioridadClass(reporte.prioridad)">
+              <i class="bi bi-flag"></i>
+              <span>{{ reporte.prioridad | titlecase }}</span>
+            </div>
+          </div>
+
+          <!-- Comentarios del admin si existen -->
+          <div class="admin-comentarios" *ngIf="reporte.comentariosAdmin">
+            <div class="comentarios-header">
+              <i class="bi bi-chat-text"></i>
+              <span>Respuesta del administrador:</span>
+            </div>
+            <p>{{ reporte.comentariosAdmin }}</p>
+          </div>
+        </div>
+
+        <div class="reporte-actions">
+          <button class="btn secondary-btn" (click)="verDetalleReporte(reporte.id)">
+            <i class="bi bi-eye"></i>
+            Ver Detalles
+          </button>
+          
+          <!-- Botón Editar (solo si está pendiente) -->
+          <button 
+            class="btn outline-btn" 
+            (click)="editarReporte(reporte.id)"
+            *ngIf="reporte.estado === 'pendiente'"
+            title="Solo puedes editar reportes pendientes"
+          >
+            <i class="bi bi-pencil"></i>
+            Editar
+          </button>
+          
+          <!-- Botón Eliminar (solo si está pendiente) -->
+          <button 
+            class="btn danger-btn" 
+            (click)="eliminarReporte(reporte.id)"
+            *ngIf="reporte.estado === 'pendiente'"
+            title="Solo puedes eliminar reportes pendientes"
+          >
+            <i class="bi bi-trash"></i>
+            Eliminar
+          </button>
+          
+          <!-- Mensaje si no se puede editar -->
+          <div class="action-info" *ngIf="reporte.estado !== 'pendiente'">
+            <i class="bi bi-info-circle"></i>
+            <span>Este reporte ya está siendo procesado</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>

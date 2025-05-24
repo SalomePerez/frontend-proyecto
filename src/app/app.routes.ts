@@ -4,6 +4,7 @@ import { AuthGuard } from './guards/auth.guard';
 // ===== PÁGINAS DE AUTENTICACIÓN Y REGISTRO =====
 import { InicioSesionComponent } from './paginas/inicio-sesion/inicio-sesion.component';
 import { RegistroComponent } from './paginas/registro/registro.component';
+import { RegistroExitosoComponent } from './paginas/registro-exitoso/registro-exitoso.component';
 import { ActivarCuentaComponent } from './paginas/activar-cuenta/activar-cuenta.component';
 import { RecuperarContraseniaComponent } from './paginas/recuperar-contrasenia/recuperar-contrasenia.component';
 import { ModificarContraseniaComponent } from './paginas/modificar-contrasenia/modificar-contrasenia.component';
@@ -13,10 +14,12 @@ import { CambiarContraseniaComponent } from './paginas/cambiar-contrasenia/cambi
 // ===== DASHBOARDS Y VISTAS PRINCIPALES =====
 import { HomeComponent } from './paginas/home/home.component';
 import { PrincipalClienteComponent } from './paginas/principal-cliente/principal-cliente.component';
-import { MisReportesComponent } from './paginas/mis-reportes/mis-reportes.component';
 
 // ===== GESTIÓN DE REPORTES =====
 import { CrearReporteComponent } from './paginas/crear-reporte/crear-reporte.component';
+import { DetalleReporteComponent } from './paginas/detalle-reporte/detalle-reporte.component';
+import { MisReportesComponent } from './paginas/mis-reportes/mis-reportes.component';
+import { ReportesPropiosComponent } from './paginas/reportes-propios/reportes-propios.component';
 
 export const routes: Routes = [
   
@@ -24,18 +27,17 @@ export const routes: Routes = [
   { path: '', redirectTo: '/home', pathMatch: 'full' },
 
   // ===== RUTAS PÚBLICAS (SIN PROTECCIÓN) =====
-  {path: 'home', component: HomeComponent},
+  { path: 'home', component: HomeComponent },
   { path: 'login', component: InicioSesionComponent },
   { path: 'registro', component: RegistroComponent },
+  { path: 'registro-exitoso', component: RegistroExitosoComponent },
   { path: 'activar-cuenta', component: ActivarCuentaComponent },
+  
+  // ===== RECUPERACIÓN DE CONTRASEÑA =====
   { path: 'recuperar-contrasenia', component: RecuperarContraseniaComponent },
   { path: 'modificar-contrasenia', component: ModificarContraseniaComponent },
   { path: 'modificar-contrasenia-exitoso', component: ModificarContraseniaExitosoComponent },
   { path: 'cambiar-contrasenia', component: CambiarContraseniaComponent },
-  { 
-    path: 'registro-exitoso', 
-    loadComponent: () => import('./paginas/registro-exitoso/registro-exitoso.component').then(m => m.RegistroExitosoComponent) 
-  },
 
   // ===== DASHBOARDS - PROTEGIDOS POR ROL =====
   { 
@@ -59,19 +61,24 @@ export const routes: Routes = [
     data: { role: 'CLIENTE' }
   },
   { 
+    path: 'detalle-reporte', 
+    component: DetalleReporteComponent,
+    canActivate: [AuthGuard],
+    data: { role: 'CLIENTE' }
+  },
+  { 
     path: 'mis-reportes', 
     component: MisReportesComponent,
     canActivate: [AuthGuard],
     data: { role: 'CLIENTE' }
   },
-
-
-  // ===== INFORMES Y ANÁLISIS - SOLO ADMINISTRADORES =====
-
-
-  // ===== CONFIGURACIÓN Y ADMINISTRACIÓN - SOLO ADMINISTRADORES =====
-  
+  { 
+    path: 'reportes-propios', 
+    component: ReportesPropiosComponent,
+    canActivate: [AuthGuard],
+    data: { role: 'CLIENTE' }
+  },
 
   // ===== RUTA WILDCARD (DEBE IR AL FINAL) =====
-  { path: '**', redirectTo: '/home' } // Cambiado para no redirigir siempre al login
+  { path: '**', redirectTo: '/home' }
 ];

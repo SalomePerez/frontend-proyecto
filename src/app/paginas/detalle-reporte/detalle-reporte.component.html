@@ -1,0 +1,256 @@
+<div class="detalle-reporte-container">
+  
+  <!-- Loading -->
+  <div class="loading-container" *ngIf="isLoading">
+    <div class="loading-content">
+      <div class="spinner"></div>
+      <p>Cargando detalles del reporte...</p>
+    </div>
+  </div>
+
+  <!-- Contenido principal -->
+  <div class="detalle-content" *ngIf="!isLoading && reporte">
+    
+    <!-- Header -->
+    <header class="page-header">
+      <div class="header-left">
+        <button class="back-btn" (click)="goBack()" title="Volver a mis reportes">
+          <i class="bi bi-arrow-left"></i>
+        </button>
+        <div class="page-title-section">
+          <h1 class="page-title">Detalle del Reporte</h1>
+          <p class="page-subtitle">Información completa del reporte #{{ reporte.id }}</p>
+        </div>
+      </div>
+      <div class="header-right">
+        <button 
+          class="btn outline-btn" 
+          (click)="descargarReporte()"
+          title="Descargar reporte en PDF"
+        >
+          <i class="bi bi-download"></i>
+          <span>Descargar</span>
+        </button>
+        <button 
+          class="btn primary-btn" 
+          (click)="editarReporte()"
+          *ngIf="reporte.estado === 'pendiente'"
+          title="Editar este reporte"
+        >
+          <i class="bi bi-pencil"></i>
+          <span>Editar</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Información principal del reporte -->
+    <section class="reporte-info-section">
+      <div class="reporte-card-main">
+        
+        <!-- Header del reporte -->
+        <div class="reporte-header">
+          <div class="reporte-categoria">
+            <i [class]="getCategoriaIcon(reporte.categoria)" [style.color]="getCategoriaColor(reporte.categoria)"></i>
+            <span class="categoria-text">{{ reporte.categoria | titlecase }}</span>
+          </div>
+          <div class="reporte-badges">
+            <div class="reporte-estado" [class]="getEstadoClass(reporte.estado)">
+              {{ getEstadoTexto(reporte.estado) }}
+            </div>
+            <div class="reporte-prioridad" [class]="getPrioridadClass(reporte.prioridad)">
+              <i class="bi bi-flag"></i>
+              {{ getPrioridadTexto(reporte.prioridad) }}
+            </div>
+          </div>
+        </div>
+
+        <!-- Título y descripción -->
+        <div class="reporte-body">
+          <h2 class="reporte-titulo">{{ reporte.titulo }}</h2>
+          <p class="reporte-descripcion">{{ reporte.descripcion }}</p>
+        </div>
+
+        <!-- Información de fechas -->
+        <div class="reporte-fechas">
+          <div class="fecha-item">
+            <i class="bi bi-calendar-plus"></i>
+            <div class="fecha-info">
+              <span class="fecha-label">Fecha de creación:</span>
+              <span class="fecha-valor">{{ formatFecha(reporte.fechaCreacion) }}</span>
+              <span class="fecha-relativa">({{ getTiempoTranscurrido(reporte.fechaCreacion) }})</span>
+            </div>
+          </div>
+          <div class="fecha-item" *ngIf="reporte.fechaActualizacion !== reporte.fechaCreacion">
+            <i class="bi bi-calendar-check"></i>
+            <div class="fecha-info">
+              <span class="fecha-label">Última actualización:</span>
+              <span class="fecha-valor">{{ formatFecha(reporte.fechaActualizacion) }}</span>
+              <span class="fecha-relativa">({{ getTiempoTranscurrido(reporte.fechaActualizacion) }})</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Grid de información detallada -->
+    <section class="detalles-grid">
+      
+      <!-- Ubicación -->
+      <div class="detalle-card ubicacion-card">
+        <div class="card-header">
+          <i class="bi bi-geo-alt"></i>
+          <h3>Ubicación</h3>
+        </div>
+        <div class="card-body">
+          <p class="direccion">{{ reporte.ubicacion.direccion }}</p>
+          <div class="coordenadas">
+            <span>Lat: {{ reporte.ubicacion.lat }}</span>
+            <span>Lng: {{ reporte.ubicacion.lng }}</span>
+          </div>
+          <button class="btn secondary-btn btn-small" (click)="abrirUbicacion()">
+            <i class="bi bi-map"></i>
+            Ver en Google Maps
+          </button>
+        </div>
+      </div>
+
+      <!-- Información de contacto -->
+      <div class="detalle-card contacto-card" *ngIf="reporte.detallesAdicionales?.telefono || reporte.detallesAdicionales?.email">
+        <div class="card-header">
+          <i class="bi bi-person-circle"></i>
+          <h3>Información de Contacto</h3>
+        </div>
+        <div class="card-body">
+          <div class="contacto-item" *ngIf="reporte.detallesAdicionales?.telefono">
+            <i class="bi bi-telephone"></i>
+            <span>{{ reporte.detallesAdicionales?.telefono }}</span>
+          </div>
+          <div class="contacto-item" *ngIf="reporte.detallesAdicionales?.email">
+            <i class="bi bi-envelope"></i>
+            <span>{{ reporte.detallesAdicionales?.email }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Testigos -->
+      <div class="detalle-card testigos-card" *ngIf="hasTestigos()">
+        <div class="card-header">
+          <i class="bi bi-people"></i>
+          <h3>Testigos</h3>
+        </div>
+        <div class="card-body">
+          <div class="testigos-lista">
+            <div class="testigo-item" *ngFor="let testigo of reporte.detallesAdicionales?.testigos">
+              <i class="bi bi-person"></i>
+              <span>{{ testigo }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Evidencias -->
+      <div class="detalle-card evidencias-card" *ngIf="hasEvidencias()">
+        <div class="card-header">
+          <i class="bi bi-file-earmark-text"></i>
+          <h3>Evidencias</h3>
+        </div>
+        <div class="card-body">
+          <div class="evidencias-lista">
+            <div class="evidencia-item" *ngFor="let evidencia of reporte.detallesAdicionales?.evidencias">
+              <i class="bi bi-paperclip"></i>
+              <span>{{ evidencia }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Imágenes -->
+      <div class="detalle-card imagenes-card" *ngIf="reporte.imagenes && reporte.imagenes.length > 0">
+        <div class="card-header">
+          <i class="bi bi-images"></i>
+          <h3>Imágenes</h3>
+        </div>
+        <div class="card-body">
+          <div class="imagenes-grid">
+            <div class="imagen-item" *ngFor="let imagen of reporte.imagenes">
+              <img [src]="imagen" [alt]="'Imagen del reporte ' + reporte.titulo" />
+              <div class="imagen-overlay">
+                <i class="bi bi-eye"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Comentarios del administrador -->
+    <section class="comentarios-section" *ngIf="reporte.comentariosAdmin">
+      <div class="comentarios-card">
+        <div class="comentarios-header">
+          <i class="bi bi-chat-text"></i>
+          <h3>Comentarios del Administrador</h3>
+          <div class="admin-badge">
+            <i class="bi bi-shield-check"></i>
+            <span>Oficial</span>
+          </div>
+        </div>
+        <div class="comentarios-body">
+          <p>{{ reporte.comentariosAdmin }}</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Timeline de estados (simulado) -->
+    <section class="timeline-section">
+      <div class="timeline-card">
+        <div class="timeline-header">
+          <i class="bi bi-clock-history"></i>
+          <h3>Historial del Reporte</h3>
+        </div>
+        <div class="timeline-body">
+          <div class="timeline">
+            <div class="timeline-item active">
+              <div class="timeline-marker"></div>
+              <div class="timeline-content">
+                <h4>Reporte Creado</h4>
+                <p>{{ formatFecha(reporte.fechaCreacion) }}</p>
+                <small>Reporte enviado y en espera de revisión</small>
+              </div>
+            </div>
+            <div class="timeline-item" [class.active]="reporte.estado !== 'pendiente'">
+              <div class="timeline-marker"></div>
+              <div class="timeline-content">
+                <h4>En Revisión</h4>
+                <p *ngIf="reporte.estado !== 'pendiente'">{{ formatFecha(reporte.fechaActualizacion) }}</p>
+                <small>Administrador asignado al caso</small>
+              </div>
+            </div>
+            <div class="timeline-item" [class.active]="reporte.estado === 'resuelto'">
+              <div class="timeline-marker"></div>
+              <div class="timeline-content">
+                <h4>Resuelto</h4>
+                <p *ngIf="reporte.estado === 'resuelto'">{{ formatFecha(reporte.fechaActualizacion) }}</p>
+                <small>Caso cerrado exitosamente</small>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- Error state -->
+  <div class="error-state" *ngIf="!isLoading && !reporte">
+    <div class="error-content">
+      <i class="bi bi-exclamation-triangle"></i>
+      <h3>Reporte no encontrado</h3>
+      <p>El reporte que buscas no existe o no tienes permisos para verlo.</p>
+      <button class="btn primary-btn" (click)="goBack()">
+        <i class="bi bi-arrow-left"></i>
+        Volver a Mis Reportes
+      </button>
+    </div>
+  </div>
+
+</div>
