@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { AuthGuard } from './guards/auth.guard';
 
 // ===== PÁGINAS DE AUTENTICACIÓN Y REGISTRO =====
 import { InicioComponent } from './paginas/inicio/inicio.component';
@@ -15,7 +16,6 @@ import { HomeComponent } from './paginas/home/home.component';
 import { InicioAdminComponent } from './paginas/inicio-admin/inicio-admin.component';
 import { InicioClienteComponent } from './paginas/inicio-cliente/inicio-cliente.component';
 import { PrincipalClienteComponent } from './paginas/principal-cliente/principal-cliente.component';
-
 
 // ===== GESTIÓN DE REPORTES =====
 import { CrearReporteComponent } from './paginas/crear-reporte/crear-reporte.component';
@@ -51,7 +51,7 @@ export const routes: Routes = [
   // ===== RUTA RAÍZ =====
   { path: '', redirectTo: '/login', pathMatch: 'full' },
 
-  // ===== AUTENTICACIÓN =====
+  // ===== RUTAS PÚBLICAS (SIN PROTECCIÓN) =====
   { path: 'login', component: InicioSesionComponent },
   { path: 'inicio', component: InicioComponent },
   { path: 'registro', component: RegistroComponent },
@@ -65,44 +65,165 @@ export const routes: Routes = [
     loadComponent: () => import('./paginas/registro-exitoso/registro-exitoso.component').then(m => m.RegistroExitosoComponent) 
   },
 
-  // ===== DASHBOARDS PRINCIPALES =====
-  { path: 'home', component: HomeComponent },
-  { path: 'principal-cliente', component: PrincipalClienteComponent },
-  { path: 'inicio-admin', component: InicioAdminComponent },
-  { path: 'inicio-cliente', component: InicioClienteComponent },
-  { path: 'principal-cliente', component: PrincipalClienteComponent },
+  // ===== DASHBOARDS - PROTEGIDOS POR ROL =====
+  { 
+    path: 'home', 
+    component: HomeComponent,
+    canActivate: [AuthGuard]
+  },
+  { 
+    path: 'inicio-admin', 
+    component: InicioAdminComponent,
+    canActivate: [AuthGuard],
+    data: { role: 'ADMINISTRADOR' }
+  },
+  { 
+    path: 'inicio-cliente', 
+    component: InicioClienteComponent,
+    canActivate: [AuthGuard],
+    data: { role: 'CLIENTE' }
+  },
+  { 
+    path: 'principal-cliente', 
+    component: PrincipalClienteComponent,
+    canActivate: [AuthGuard],
+    data: { role: 'CLIENTE' }
+  },
+  { 
+    path: 'dashboard', 
+    component: PrincipalClienteComponent,
+    canActivate: [AuthGuard],
+    data: { role: 'CLIENTE' }
+  },
 
-  // O como ruta protegida después del login
-  { path: 'dashboard', component: PrincipalClienteComponent },
+  // ===== GESTIÓN DE REPORTES - PROTEGIDAS =====
+  { 
+    path: 'crear-reporte', 
+    component: CrearReporteComponent,
+    canActivate: [AuthGuard],
+    data: { role: 'CLIENTE' }
+  },
+  { 
+    path: 'editar-reporte', 
+    component: EditarReporteComponent,
+    canActivate: [AuthGuard]
+  },
+  { 
+    path: 'detalle-reporte', 
+    component: DetalleReporteComponent,
+    canActivate: [AuthGuard]
+  },
+  { 
+    path: 'mis-reportes', 
+    component: MisReportesComponent,
+    canActivate: [AuthGuard],
+    data: { role: 'CLIENTE' }
+  },
+  { 
+    path: 'gestionar-reportes', 
+    component: GestionarReportesComponent,
+    canActivate: [AuthGuard],
+    data: { role: 'ADMINISTRADOR' }
+  },
+  { 
+    path: 'historial-reporte', 
+    component: HistorialReporteComponent,
+    canActivate: [AuthGuard]
+  },
+  { 
+    path: 'verificar-reporte', 
+    component: VerificarReporteComponent,
+    canActivate: [AuthGuard],
+    data: { role: 'ADMINISTRADOR' }
+  },
+  { 
+    path: 'rechazar-reporte', 
+    component: RechazarReporteComponent,
+    canActivate: [AuthGuard],
+    data: { role: 'ADMINISTRADOR' }
+  },
+  { 
+    path: 'revision-reporte', 
+    component: RevisionReporteComponent,
+    canActivate: [AuthGuard],
+    data: { role: 'ADMINISTRADOR' }
+  },
+  { 
+    path: 'notificaciones', 
+    component: NotificacionesComponent,
+    canActivate: [AuthGuard]
+  },
 
-  // ===== GESTIÓN DE REPORTES =====
-  { path: 'crear-reporte', component: CrearReporteComponent },
-  { path: 'editar-reporte', component: EditarReporteComponent },
-  { path: 'detalle-reporte', component: DetalleReporteComponent },
-  { path: 'mis-reportes', component: MisReportesComponent },
-  { path: 'gestionar-reportes', component: GestionarReportesComponent },
-  { path: 'historial-reporte', component: HistorialReporteComponent },
-  { path: 'verificar-reporte', component: VerificarReporteComponent },
-  { path: 'rechazar-reporte', component: RechazarReporteComponent },
-  { path: 'revision-reporte', component: RevisionReporteComponent },
-  { path: 'notificaciones', component: NotificacionesComponent },
+  // ===== PERFILES DE USUARIO - PROTEGIDOS =====
+  { 
+    path: 'perfil-administrador', 
+    component: PerfilAdministradorComponent,
+    canActivate: [AuthGuard],
+    data: { role: 'ADMINISTRADOR' }
+  },
+  { 
+    path: 'perfil-cliente', 
+    component: PerfilClienteComponent,
+    canActivate: [AuthGuard],
+    data: { role: 'CLIENTE' }
+  },
+  { 
+    path: 'editar-perfil-usuario', 
+    component: EditarPerfilUsuarioComponent,
+    canActivate: [AuthGuard]
+  },
+  { 
+    path: 'eliminar-cuenta', 
+    component: EliminarCuentaComponent,
+    canActivate: [AuthGuard],
+    data: { role: 'CLIENTE' }
+  },
+  { 
+    path: 'eliminar-administrador', 
+    component: EliminarAdministradorComponent,
+    canActivate: [AuthGuard],
+    data: { role: 'ADMINISTRADOR' }
+  },
 
-  // ===== PERFILES DE USUARIO =====
-  { path: 'perfil-administrador', component: PerfilAdministradorComponent },
-  { path: 'perfil-cliente', component: PerfilClienteComponent },
-  { path: 'editar-perfil-usuario', component: EditarPerfilUsuarioComponent },
-  { path: 'eliminar-cuenta', component: EliminarCuentaComponent },
-  { path: 'eliminar-administrador', component: EliminarAdministradorComponent },
+  // ===== INFORMES Y ANÁLISIS - SOLO ADMINISTRADORES =====
+  { 
+    path: 'generar-informes', 
+    component: GenerarInformesComponent,
+    canActivate: [AuthGuard],
+    data: { role: 'ADMINISTRADOR' }
+  },
+  { 
+    path: 'informes-por-categoria', 
+    component: InformesPorCategoriaComponent,
+    canActivate: [AuthGuard],
+    data: { role: 'ADMINISTRADOR' }
+  },
+  { 
+    path: 'informes-por-zona', 
+    component: InformesPorZonaComponent,
+    canActivate: [AuthGuard],
+    data: { role: 'ADMINISTRADOR' }
+  },
+  { 
+    path: 'filtrar-por-prioridad', 
+    component: FiltrarPorPrioridadComponent,
+    canActivate: [AuthGuard],
+    data: { role: 'ADMINISTRADOR' }
+  },
+  { 
+    path: 'filtrar-por-ubicacion', 
+    component: FiltrarPorUbicacionComponent,
+    canActivate: [AuthGuard],
+    data: { role: 'ADMINISTRADOR' }
+  },
 
-  // ===== INFORMES Y ANÁLISIS =====
-  { path: 'generar-informes', component: GenerarInformesComponent },
-  { path: 'informes-por-categoria', component: InformesPorCategoriaComponent },
-  { path: 'informes-por-zona', component: InformesPorZonaComponent },
-  { path: 'filtrar-por-prioridad', component: FiltrarPorPrioridadComponent },
-  { path: 'filtrar-por-ubicacion', component: FiltrarPorUbicacionComponent },
-
-  // ===== CONFIGURACIÓN Y ADMINISTRACIÓN =====
-  { path: 'categorias', component: CategoriasComponent },
+  // ===== CONFIGURACIÓN Y ADMINISTRACIÓN - SOLO ADMINISTRADORES =====
+  { 
+    path: 'categorias', 
+    component: CategoriasComponent,
+    canActivate: [AuthGuard],
+    data: { role: 'ADMINISTRADOR' }
+  },
 
   // ===== RUTA WILDCARD (DEBE IR AL FINAL) =====
   { path: '**', redirectTo: '/login' }

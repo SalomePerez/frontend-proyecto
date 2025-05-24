@@ -31,24 +31,81 @@
   <div class="right-panel">
     <h2 class="form-title">Activar Cuenta</h2>
 
-    <form>
-
-      <!-- Grupo de correo y botón en fila -->
-      <div class="input-button-group">
-        <input id="email" type="email" class="input" placeholder="Correo electrónico" />
-
-        <button type="button" class="btn primary-btn">Enviar código</button>
+    <!-- Formulario principal -->
+    <form [formGroup]="activarForm" (ngSubmit)="verificarCodigo()" novalidate *ngIf="!cuentaActivada">
+      
+      <!-- Input de email -->
+      <input 
+        id="email" 
+        type="email" 
+        formControlName="email"
+        class="input" 
+        [class.input-error]="emailControl?.invalid && emailControl?.touched"
+        placeholder="Correo electrónico" />
+      
+      <!-- Mensaje de error del email -->
+      <div *ngIf="emailControl?.invalid && emailControl?.touched" class="error-message">
+        <span *ngIf="emailControl?.errors?.['required']">El email es requerido</span>
+        <span *ngIf="emailControl?.errors?.['email']">Ingresa un email válido</span>
       </div>
 
-        <input type="text" class="input codigo-separado" placeholder="Escribe tu código" />
+      <!-- Input de código -->
+      <input 
+        type="text" 
+        formControlName="codigo"
+        class="input codigo-separado" 
+        [class.input-error]="codigoControl?.invalid && codigoControl?.touched"
+        placeholder="Escribe tu código de verificación" />
+      
+      <!-- Mensaje de error del código -->
+      <div *ngIf="codigoControl?.invalid && codigoControl?.touched" class="error-message">
+        <span *ngIf="codigoControl?.errors?.['required']">El código es requerido</span>
+      </div>
 
-      <button type="button" class="btn primary-btn">Verificar</button>
+      <!-- Botón verificar -->
+      <button 
+        type="submit" 
+        class="btn primary-btn"
+        [disabled]="activarForm.invalid || isLoading">
+        <span *ngIf="!isLoading">Verificar</span>
+        <span *ngIf="isLoading">
+          <div class="spinner"></div> Verificando...
+        </span>
+      </button>
     </form>
 
-    <p class="info-text">
+    <!-- Estado de cuenta activada -->
+    <div *ngIf="cuentaActivada" class="success-container">
+      <div class="success-icon">✅</div>
+      <h3 class="success-title">¡Cuenta Activada!</h3>
+    </div>
+
+    <!-- Mensajes de éxito -->
+    <div *ngIf="successMessage" class="message success-message">
+      {{ successMessage }}
+    </div>
+
+    <!-- Mensajes de error -->
+    <div *ngIf="errorMessage" class="message error-message-box">
+      {{ errorMessage }}
+      <button type="button" class="btn-clear" (click)="limpiarError()">✕</button>
+    </div>
+
+    <!-- Texto informativo -->
+    <p class="info-text" *ngIf="!cuentaActivada && !successMessage">
+      Ingresa tu correo electrónico y el código de verificación que recibiste para activar tu cuenta.
+    </p>
+
+    <p class="info-text" *ngIf="cuentaActivada">
       Tu cuenta ha sido creada con éxito. Ahora puedes iniciar sesión y comenzar a reportar incidentes en tu comunidad.
     </p>
 
-    <button type="button" class="btn secondary-btn">Iniciar Sesión</button>
+    <!-- Botón ir a login -->
+    <button 
+      type="button" 
+      class="btn secondary-btn"
+      (click)="irALogin()">
+      Iniciar Sesión
+    </button>
   </div>
 </div>
