@@ -9,13 +9,27 @@
   
   <!-- Bootstrap Icons -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
- 
-  <!-- Google Maps API -->
-  <script async defer
-          src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC6oe4yksUiP6uTnEEbHAGgBC5CKBewL6k&libraries=places,geometry,drawing&v=3.53">
-  </script>
 </head>
 <body>
   <app-root></app-root>
+  
+  <!-- Google Maps API - CALLBACK PARA DEBUG -->
+  <script>
+    function initGoogleMaps() {
+      console.log('🗺️ Google Maps API cargada correctamente');
+      console.log('Google Maps disponible:', typeof google !== 'undefined' && google.maps);
+      // Opcional: disparar evento personalizado cuando esté listo
+      window.dispatchEvent(new Event('google-maps-loaded'));
+    }
+    
+    function onGoogleMapsError() {
+      console.error('❌ Error cargando Google Maps API');
+    }
+  </script>
+  
+  <script async defer
+          src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC6oe4yksUiP6uTnEEbHAGgBC5CKBewL6k&libraries=places,geometry&v=3.53&callback=initGoogleMaps"
+          onerror="onGoogleMapsError()">
+  </script>
 </body>
 </html>

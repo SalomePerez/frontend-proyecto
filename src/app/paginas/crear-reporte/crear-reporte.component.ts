@@ -96,9 +96,9 @@ export class CrearReporteComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   ngAfterViewInit(): void {
-    // Inicializar mapa cuando se muestre
+    // Inicializar mapa cuando se muestre el paso 4 (ubicación)
     setTimeout(() => {
-      if (this.currentStep === 3) {
+      if (this.currentStep === 4) {
         this.initializeMap();
       }
     }, 100);
@@ -373,16 +373,38 @@ export class CrearReporteComponent implements OnInit, OnDestroy, AfterViewInit {
 
   private initializeMap(): void {
     const mapElement = document.getElementById('map-container');
-    if (!mapElement || this.map) return;
+    if (!mapElement) {
+      console.warn('Elemento del mapa no encontrado');
+      return;
+    }
+    
+    if (this.map) {
+      console.log('Mapa ya inicializado');
+      return;
+    }
 
-    if (typeof google !== 'undefined' && google.maps) {
+    // Esperar un poco más si Google Maps no está listo
+    if (typeof google === 'undefined' || !google.maps) {
+      console.log('Google Maps no disponible, reintentando...');
+      setTimeout(() => this.initializeMap(), 500);
+      return;
+    }
+
+    try {
       this.map = new google.maps.Map(mapElement, {
         center: { 
           lat: this.reporte.ubicacion.latitud, 
           lng: this.reporte.ubicacion.longitud 
         },
         zoom: 15,
-        mapTypeId: google.maps.MapTypeId.ROADMAP
+        mapTypeId: google.maps.MapTypeId.ROADMAP,
+        styles: [
+          {
+            featureType: 'poi',
+            elementType: 'labels',
+            stylers: [{ visibility: 'off' }]
+          }
+        ]
       });
 
       this.marker = new google.maps.Marker({
@@ -392,7 +414,15 @@ export class CrearReporteComponent implements OnInit, OnDestroy, AfterViewInit {
         },
         map: this.map,
         draggable: true,
-        title: 'Ubicación del reporte'
+        title: 'Ubicación del reporte',
+        icon: {
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 10,
+          fillColor: '#ef4444',
+          fillOpacity: 1,
+          strokeColor: '#ffffff',
+          strokeWeight: 3
+        }
       });
 
       // Actualizar ubicación cuando se mueva el marcador
@@ -412,6 +442,10 @@ export class CrearReporteComponent implements OnInit, OnDestroy, AfterViewInit {
       });
 
       this.isMapReady = true;
+      console.log('Mapa inicializado correctamente');
+      
+    } catch (error) {
+      console.error('Error inicializando mapa:', error);
     }
   }
 
@@ -425,8 +459,22 @@ export class CrearReporteComponent implements OnInit, OnDestroy, AfterViewInit {
         };
         this.map.setCenter(newPosition);
         this.marker.setPosition(newPosition);
+      } else {
+        // Si el mapa no existe, lo inicializamos
+        this.initializeMap();
       }
     }, 1000);
+  }
+
+  // Método para forzar inicialización del mapa
+  forceMapInitialization(): void {
+    if (this.currentStep === 4) {
+      this.map = null; // Reset
+      this.marker = null; // Reset
+      setTimeout(() => {
+        this.initializeMap();
+      }, 100);
+    }
   }
 
   // MANEJO DE FOTOS

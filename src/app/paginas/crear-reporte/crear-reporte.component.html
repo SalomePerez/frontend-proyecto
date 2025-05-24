@@ -156,7 +156,7 @@
     </div>
 
     <!-- PASO 3: PRIORIDAD Y CONFIGURACIONES -->
-    <div class="form-step" *ngIf="currentStep === 4">
+    <div class="form-step" *ngIf="currentStep === 3">
       <div class="step-header">
         <h2>Prioridad y Configuraciones</h2>
         <p>Define la importancia del reporte y configuraciones de privacidad</p>
@@ -276,7 +276,7 @@
     </div>
 
     <!-- PASO 4: UBICACIÓN -->
-    <div class="form-step" *ngIf="currentStep === 3">
+    <div class="form-step" *ngIf="currentStep === 4">
       <div class="step-header">
         <h2>Ubicación del Incidente</h2>
         <p>Indica dónde ocurrió el incidente. Puedes mover el marcador para ajustar la ubicación</p>
@@ -294,20 +294,41 @@
             </div>
           </div>
           
-          <button 
-            type="button" 
-            class="btn secondary-btn location-btn"
-            (click)="detectarUbicacionActualEnMapa()"
-            [disabled]="isLoadingLocation"
-          >
-            <i class="bi bi-geo-alt" *ngIf="!isLoadingLocation"></i>
-            <i class="bi bi-arrow-clockwise spin" *ngIf="isLoadingLocation"></i>
-            <span>{{ isLoadingLocation ? 'Detectando...' : 'Usar Mi Ubicación' }}</span>
-          </button>
+          <div class="location-buttons">
+            <button 
+              type="button" 
+              class="btn secondary-btn location-btn"
+              (click)="detectarUbicacionActualEnMapa()"
+              [disabled]="isLoadingLocation"
+            >
+              <i class="bi bi-geo-alt" *ngIf="!isLoadingLocation"></i>
+              <i class="bi bi-arrow-clockwise spin" *ngIf="isLoadingLocation"></i>
+              <span>{{ isLoadingLocation ? 'Detectando...' : 'Mi Ubicación' }}</span>
+            </button>
+            
+            <button 
+              type="button" 
+              class="btn outline-btn location-btn"
+              (click)="forceMapInitialization()"
+              title="Recargar mapa"
+            >
+              <i class="bi bi-arrow-clockwise"></i>
+              <span>Recargar Mapa</span>
+            </button>
+          </div>
         </div>
         
         <div class="map-container">
           <div id="map-container" class="google-map"></div>
+          
+          <!-- Overlay si el mapa está cargando -->
+          <div class="map-loading-overlay" *ngIf="!isMapReady">
+            <div class="loading-content">
+              <div class="spinner"></div>
+              <p>Cargando Google Maps...</p>
+            </div>
+          </div>
+          
           <div class="map-instructions">
             <i class="bi bi-info-circle"></i>
             <span>Haz clic en el mapa o arrastra el marcador para ajustar la ubicación</span>
