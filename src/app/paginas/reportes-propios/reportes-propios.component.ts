@@ -257,6 +257,7 @@ export class ReportesPropiosComponent implements OnInit, OnDestroy {
   }
 
   editarReporte(reporteId: number): void {
+    console.log('🔧 Navegando a editar reporte ID:', reporteId);
     this.router.navigate(['/editar-reporte'], { queryParams: { id: reporteId } });
   }
 

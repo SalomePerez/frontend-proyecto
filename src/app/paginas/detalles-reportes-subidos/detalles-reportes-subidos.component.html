@@ -1,0 +1,349 @@
+<div class="detalle-reporte-subidos-container">
+  
+  <!-- Loading -->
+  <div class="loading-container" *ngIf="isLoading">
+    <div class="loading-content">
+      <div class="spinner"></div>
+      <p>Cargando detalles del reporte...</p>
+    </div>
+  </div>
+
+  <!-- Contenido principal -->
+  <div class="detalle-content" *ngIf="!isLoading && reporte">
+    
+    <!-- Header -->
+    <header class="page-header">
+      <div class="header-left">
+        <button class="back-btn" (click)="goBack()" title="Volver a reportes de la comunidad">
+          <i class="bi bi-arrow-left"></i>
+        </button>
+        <div class="page-title-section">
+          <h1 class="page-title">Reporte de la Comunidad</h1>
+          <p class="page-subtitle">Información del reporte #{{ reporte.id }}</p>
+        </div>
+      </div>
+      <div class="header-right">
+        <div class="reporte-stats">
+          <div class="stat-item">
+            <i class="bi bi-eye"></i>
+            <span>{{ reporte.estadisticas.vistas }}</span>
+          </div>
+          <div class="stat-item">
+            <i class="bi bi-heart"></i>
+            <span>{{ reporte.estadisticas.reacciones }}</span>
+          </div>
+          <div class="stat-item">
+            <i class="bi bi-chat"></i>
+            <span>{{ reporte.estadisticas.comentarios }}</span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Información principal del reporte -->
+    <section class="reporte-info-section">
+      <div class="reporte-card-main">
+        
+        <!-- Header del reporte con autor -->
+        <div class="reporte-header">
+          <div class="autor-info">
+            <div class="autor-avatar">
+              <img [src]="reporte.autor.avatar || 'assets/default-avatar.png'" [alt]="reporte.autor.nombre">
+              <i class="bi bi-patch-check-fill verified-badge" *ngIf="reporte.autor.verificado" title="Usuario verificado"></i>
+            </div>
+            <div class="autor-details">
+              <span class="autor-nombre">{{ reporte.autor.nombre }}</span>
+              <span class="fecha-publicacion">{{ formatFecha(reporte.fechaCreacion) }}</span>
+              <span class="tiempo-transcurrido">{{ getTiempoTranscurrido(reporte.fechaCreacion) }}</span>
+            </div>
+          </div>
+          <div class="reporte-badges">
+            <div class="reporte-categoria">
+              <i [class]="getCategoriaIcon(reporte.categoria)" [style.color]="getCategoriaColor(reporte.categoria)"></i>
+              <span class="categoria-text">{{ reporte.categoria | titlecase }}</span>
+            </div>
+            <div class="reporte-estado" [class]="getEstadoClass(reporte.estado)">
+              {{ getEstadoTexto(reporte.estado) }}
+            </div>
+            <div class="reporte-prioridad" [class]="getPrioridadClass(reporte.prioridad)">
+              <i class="bi bi-flag"></i>
+              {{ getPrioridadTexto(reporte.prioridad) }}
+            </div>
+          </div>
+        </div>
+
+        <!-- Título y descripción -->
+        <div class="reporte-body">
+          <h2 class="reporte-titulo">{{ reporte.titulo }}</h2>
+          <p class="reporte-descripcion">{{ reporte.descripcion }}</p>
+        </div>
+
+        <!-- Acciones del reporte -->
+        <div class="reporte-actions">
+          <button class="action-btn reaction-btn" (click)="reaccionarReporte()">
+            <i class="bi bi-heart"></i>
+            <span>{{ reporte.estadisticas.reacciones }}</span>
+          </button>
+          <button class="action-btn comment-btn">
+            <i class="bi bi-chat"></i>
+            <span>Comentar</span>
+          </button>
+          <button class="action-btn share-btn" (click)="compartirReporte()">
+            <i class="bi bi-share"></i>
+            <span>Compartir</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Grid de información detallada -->
+    <section class="detalles-grid">
+      
+      <!-- Ubicación -->
+      <div class="detalle-card ubicacion-card">
+        <div class="card-header">
+          <i class="bi bi-geo-alt"></i>
+          <h3>Ubicación</h3>
+        </div>
+        <div class="card-body">
+          <p class="direccion">{{ reporte.ubicacion.direccion }}</p>
+          <div class="coordenadas">
+            <span>Lat: {{ reporte.ubicacion.lat }}</span>
+            <span>Lng: {{ reporte.ubicacion.lng }}</span>
+          </div>
+          <button class="btn secondary-btn btn-small" (click)="abrirUbicacion()">
+            <i class="bi bi-map"></i>
+            Ver en Google Maps
+          </button>
+        </div>
+      </div>
+
+      <!-- Información de contacto -->
+      <div class="detalle-card contacto-card" *ngIf="reporte.detallesAdicionales?.telefono || reporte.detallesAdicionales?.email">
+        <div class="card-header">
+          <i class="bi bi-person-circle"></i>
+          <h3>Información de Contacto</h3>
+        </div>
+        <div class="card-body">
+          <div class="contacto-item" *ngIf="reporte.detallesAdicionales?.telefono">
+            <i class="bi bi-telephone"></i>
+            <span>{{ reporte.detallesAdicionales?.telefono }}</span>
+          </div>
+          <div class="contacto-item" *ngIf="reporte.detallesAdicionales?.email">
+            <i class="bi bi-envelope"></i>
+            <span>{{ reporte.detallesAdicionales?.email }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Testigos -->
+      <div class="detalle-card testigos-card" *ngIf="hasTestigos()">
+        <div class="card-header">
+          <i class="bi bi-people"></i>
+          <h3>Testigos</h3>
+        </div>
+        <div class="card-body">
+          <div class="testigos-lista">
+            <div class="testigo-item" *ngFor="let testigo of reporte.detallesAdicionales?.testigos">
+              <i class="bi bi-person"></i>
+              <span>{{ testigo }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Evidencias -->
+      <div class="detalle-card evidencias-card" *ngIf="hasEvidencias()">
+        <div class="card-header">
+          <i class="bi bi-file-earmark-text"></i>
+          <h3>Evidencias</h3>
+        </div>
+        <div class="card-body">
+          <div class="evidencias-lista">
+            <div class="evidencia-item" *ngFor="let evidencia of reporte.detallesAdicionales?.evidencias">
+              <i class="bi bi-paperclip"></i>
+              <span>{{ evidencia }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Imágenes -->
+      <div class="detalle-card imagenes-card" *ngIf="hasImagenes()">
+        <div class="card-header">
+          <i class="bi bi-images"></i>
+          <h3>Imágenes</h3>
+        </div>
+        <div class="card-body">
+          <div class="imagenes-grid">
+            <div class="imagen-item" *ngFor="let imagen of reporte.imagenes">
+              <img [src]="imagen" [alt]="'Imagen del reporte ' + reporte.titulo" />
+              <div class="imagen-overlay">
+                <i class="bi bi-eye"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Estadísticas del reporte -->
+      <div class="detalle-card stats-card">
+        <div class="card-header">
+          <i class="bi bi-bar-chart"></i>
+          <h3>Estadísticas</h3>
+        </div>
+        <div class="card-body">
+          <div class="stats-grid">
+            <div class="stat-box">
+              <i class="bi bi-eye"></i>
+              <div class="stat-info">
+                <span class="stat-number">{{ reporte.estadisticas.vistas }}</span>
+                <span class="stat-label">Visualizaciones</span>
+              </div>
+            </div>
+            <div class="stat-box">
+              <i class="bi bi-heart-fill"></i>
+              <div class="stat-info">
+                <span class="stat-number">{{ reporte.estadisticas.reacciones }}</span>
+                <span class="stat-label">Reacciones</span>
+              </div>
+            </div>
+            <div class="stat-box">
+              <i class="bi bi-chat-fill"></i>
+              <div class="stat-info">
+                <span class="stat-number">{{ reporte.estadisticas.comentarios }}</span>
+                <span class="stat-label">Comentarios</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Comentarios del administrador -->
+    <section class="comentarios-section" *ngIf="reporte.comentariosAdmin">
+      <div class="comentarios-card admin-comments">
+        <div class="comentarios-header">
+          <i class="bi bi-chat-text"></i>
+          <h3>Respuesta Oficial</h3>
+          <div class="admin-badge">
+            <i class="bi bi-shield-check"></i>
+            <span>Oficial</span>
+          </div>
+        </div>
+        <div class="comentarios-body">
+          <p>{{ reporte.comentariosAdmin }}</p>
+          <div class="admin-signature">
+            <span>Actualizado: {{ formatFecha(reporte.fechaActualizacion) }}</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Timeline de estados -->
+    <section class="timeline-section">
+      <div class="timeline-card">
+        <div class="timeline-header">
+          <i class="bi bi-clock-history"></i>
+          <h3>Historial del Reporte</h3>
+        </div>
+        <div class="timeline-body">
+          <div class="timeline">
+            <div class="timeline-item active">
+              <div class="timeline-marker"></div>
+              <div class="timeline-content">
+                <h4>Reporte Publicado</h4>
+                <p>{{ formatFecha(reporte.fechaCreacion) }}</p>
+                <small>Publicado por {{ reporte.autor.nombre }}</small>
+              </div>
+            </div>
+            <div class="timeline-item" [class.active]="reporte.estado !== 'pendiente'">
+              <div class="timeline-marker"></div>
+              <div class="timeline-content">
+                <h4>En Revisión</h4>
+                <p *ngIf="reporte.estado !== 'pendiente'">{{ formatFecha(reporte.fechaActualizacion) }}</p>
+                <small>Administrador asignado al caso</small>
+              </div>
+            </div>
+            <div class="timeline-item" [class.active]="reporte.estado === 'resuelto'">
+              <div class="timeline-marker"></div>
+              <div class="timeline-content">
+                <h4>Resuelto</h4>
+                <p *ngIf="reporte.estado === 'resuelto'">{{ formatFecha(reporte.fechaActualizacion) }}</p>
+                <small>Caso cerrado exitosamente</small>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Sección de comentarios de la comunidad -->
+    <section class="community-comments-section">
+      <div class="comments-card">
+        <div class="comments-header">
+          <i class="bi bi-chat-dots"></i>
+          <h3>Comentarios de la Comunidad</h3>
+          <span class="comments-count">{{ reporte.estadisticas.comentarios }} comentarios</span>
+        </div>
+        <div class="comments-body">
+          <div class="add-comment">
+            <div class="user-avatar">
+              <i class="bi bi-person-circle"></i>
+            </div>
+            <div class="comment-input">
+              <textarea placeholder="Añade un comentario..." rows="3"></textarea>
+              <button class="btn primary-btn btn-small">
+                <i class="bi bi-send"></i>
+                Comentar
+              </button>
+            </div>
+          </div>
+          
+          <!-- Comentarios placeholder -->
+          <div class="comments-list">
+            <div class="comment-item">
+              <div class="comment-avatar">
+                <i class="bi bi-person-circle"></i>
+              </div>
+              <div class="comment-content">
+                <div class="comment-header">
+                  <span class="comment-author">Ana Rodríguez</span>
+                  <span class="comment-time">Hace 2 horas</span>
+                </div>
+                <p class="comment-text">Gracias por reportar esto, también lo he notado en mi zona.</p>
+              </div>
+            </div>
+            <div class="comment-item">
+              <div class="comment-avatar">
+                <i class="bi bi-person-circle"></i>
+              </div>
+              <div class="comment-content">
+                <div class="comment-header">
+                  <span class="comment-author">Luis Martínez</span>
+                  <span class="comment-time">Hace 4 horas</span>
+                </div>
+                <p class="comment-text">¿Ya hubo alguna respuesta oficial sobre este tema?</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- Error state -->
+  <div class="error-state" *ngIf="!isLoading && !reporte">
+    <div class="error-content">
+      <i class="bi bi-exclamation-triangle"></i>
+      <h3>Reporte no encontrado</h3>
+      <p>El reporte que buscas no existe o no está disponible.</p>
+      <button class="btn primary-btn" (click)="goBack()">
+        <i class="bi bi-arrow-left"></i>
+        Volver a Reportes de la Comunidad
+      </button>
+    </div>
+  </div>
+
+</div>

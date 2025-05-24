@@ -22,12 +22,23 @@ interface Reporte {
   imagenes?: string[];
   comentariosAdmin?: string;
   esPropio?: boolean;
+  comentarios?: Comentario[];
   detallesAdicionales?: {
     telefono?: string;
     email?: string;
     testigos?: string[];
     evidencias?: string[];
   };
+}
+
+interface Comentario {
+  id: number;
+  texto: string;
+  autor: string;
+  fechaCreacion: string;
+  esAdmin: boolean;
+  esPropio: boolean;
+  avatar?: string;
 }
 
 @Component({
