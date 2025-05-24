@@ -1,10 +1,14 @@
-import { Component, OnInit, OnDestroy, AfterViewInit } from '@angular/core';
+import { Component, OnInit, OnDestroy, AfterViewInit, NgZone, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { Subject } from 'rxjs';
+import { Subject, takeUntil } from 'rxjs';
+import mapboxgl from 'mapbox-gl';
+import { environment } from '../../../environments/environment';
+import { ReporteService, CategoriaBackend } from '../../servicios/reporte.service';
+import { AuthService } from '../../servicios/auth.service';
 
-// Interfaces basadas en tu DTO
+// Interfaces para el frontend
 interface UbicacionDTO {
   latitud: number;
   longitud: number;
@@ -31,9 +35,6 @@ interface Categoria {
   color: string;
   descripcion: string;
 }
-
-// Declaración para Google Maps
-declare let google: any;
 
 @Component({
   selector: 'app-crear-reporte',
@@ -71,91 +72,181 @@ export class CrearReporteComponent implements OnInit, OnDestroy, AfterViewInit {
   currentStep: number = 1;
   totalSteps: number = 5;
   isLoadingLocation: boolean = false;
-  showLocationSelector: boolean = false;
+  isLoadingCategorias: boolean = false;
 
-  // Datos
+  // Datos del backend
   categorias: Categoria[] = [];
+  categoriasBackend: CategoriaBackend[] = [];
   fotosSeleccionadas: File[] = [];
   previewUrls: string[] = [];
   prioridadesDisponibles: Array<'baja' | 'media' | 'alta' | 'critica'> = ['baja', 'media', 'alta', 'critica'];
   
-  // Mapa
-  map: any = null;
-  marker: any = null;
+  // Mapbox
+  map: mapboxgl.Map | null = null;
+  marker: mapboxgl.Marker | null = null;
   isMapReady: boolean = false;
+  mapError: string = '';
+  private readonly MAPBOX_TOKEN = environment.mapboxToken;
+
+  // Estados de progreso
+  uploadProgress: number = 0;
+  currentUploadStep: string = '';
 
   private destroy$ = new Subject<void>();
 
-  constructor(private router: Router) {
-    this.initializeCategorias();
+  constructor(
+    private router: Router,
+    private ngZone: NgZone,
+    private cdr: ChangeDetectorRef,
+    private reporteService: ReporteService,
+    private authService: AuthService
+  ) {
+    console.log('🏗️ Inicializando CrearReporteComponent con backend...');
     this.loadUserData();
+    this.configureMapbox();
   }
 
   ngOnInit(): void {
+    console.log('🚀 ngOnInit - Cargando datos del backend...');
+    this.loadCategoriasFromBackend();
     this.detectarUbicacionActual();
   }
 
   ngAfterViewInit(): void {
-    // Inicializar mapa cuando se muestre el paso 4 (ubicación)
-    setTimeout(() => {
-      if (this.currentStep === 4) {
-        this.initializeMap();
-      }
-    }, 100);
+    console.log('🔄 ngAfterViewInit - Preparando para inicializar mapa si es necesario...');
   }
 
   ngOnDestroy(): void {
+    console.log('💀 ngOnDestroy - Limpiando recursos...');
+    this.destroyMap();
     this.destroy$.next();
     this.destroy$.complete();
   }
 
-  private initializeCategorias(): void {
-    this.categorias = [
-      {
-        id: 'emergencia',
-        nombre: 'Emergencia',
-        icono: 'bi bi-exclamation-triangle-fill',
-        color: '#ef4444',
-        descripcion: 'Situaciones que requieren atención inmediata (accidentes, incendios, etc.)'
-      },
-      {
-        id: 'seguridad',
-        nombre: 'Seguridad',
-        icono: 'bi bi-shield-exclamation',
+  private configureMapbox(): void {
+    if (this.MAPBOX_TOKEN) {
+      mapboxgl.accessToken = this.MAPBOX_TOKEN;
+      console.log('✅ Token de Mapbox configurado');
+    } else {
+      console.error('❌ Token de Mapbox no encontrado en environment');
+      this.mapError = 'Token de Mapbox no configurado';
+    }
+  }
+
+  /**
+   * Cargar categorías desde el backend
+   */
+  private loadCategoriasFromBackend(): void {
+    console.log('📋 Cargando categorías desde el backend...');
+    this.isLoadingCategorias = true;
+    
+    this.reporteService.getCategorias()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (categorias) => {
+          console.log('✅ Categorías cargadas del backend:', categorias);
+          this.categoriasBackend = categorias;
+          this.mapCategoriasToFrontend(categorias);
+          this.isLoadingCategorias = false;
+          this.cdr.detectChanges();
+        },
+        error: (error) => {
+          console.error('❌ Error cargando categorías:', error);
+          this.formErrors.categorias = 'Error cargando categorías. Usando categorías por defecto.';
+          this.initializeDefaultCategorias();
+          this.isLoadingCategorias = false;
+          this.cdr.detectChanges();
+        }
+      });
+  }
+
+  /**
+   * Mapear categorías del backend al formato del frontend
+   */
+  private mapCategoriasToFrontend(categoriasBackend: CategoriaBackend[]): void {
+    const iconosYColores: { [key: string]: { icono: string; color: string; descripcion: string } } = {
+      'Seguridad': { 
+        icono: 'bi bi-shield-exclamation', 
         color: '#f59e0b',
         descripcion: 'Problemas de seguridad ciudadana (robos, vandalismo, etc.)'
       },
-      {
-        id: 'infraestructura',
-        nombre: 'Infraestructura',
-        icono: 'bi bi-tools',
+      'Emergencia': { 
+        icono: 'bi bi-exclamation-triangle-fill', 
+        color: '#ef4444',
+        descripcion: 'Situaciones que requieren atención inmediata (accidentes, incendios, etc.)'
+      },
+      'Infraestructura': { 
+        icono: 'bi bi-tools', 
         color: '#3b82f6',
         descripcion: 'Problemas con servicios públicos (semáforos, alumbrado, etc.)'
       },
+      'Otros': { 
+        icono: 'bi bi-chat-dots', 
+        color: '#6b7280',
+        descripcion: 'Otras situaciones que requieren atención'
+      }
+    };
+
+    this.categorias = categoriasBackend.map(categoria => ({
+      id: categoria.id,
+      nombre: categoria.nombre,
+      icono: iconosYColores[categoria.nombre]?.icono || 'bi bi-question-circle',
+      color: iconosYColores[categoria.nombre]?.color || '#6b7280',
+      descripcion: iconosYColores[categoria.nombre]?.descripcion || 'Categoría de reporte'
+    }));
+
+    console.log('🎨 Categorías mapeadas:', this.categorias);
+  }
+
+  /**
+   * Categorías por defecto en caso de error
+   */
+  private initializeDefaultCategorias(): void {
+    this.categorias = [
       {
-        id: 'otros',
+        id: 'default-emergencia',
+        nombre: 'Emergencia',
+        icono: 'bi bi-exclamation-triangle-fill',
+        color: '#ef4444',
+        descripcion: 'Situaciones que requieren atención inmediata'
+      },
+      {
+        id: 'default-seguridad',
+        nombre: 'Seguridad',
+        icono: 'bi bi-shield-exclamation',
+        color: '#f59e0b',
+        descripcion: 'Problemas de seguridad ciudadana'
+      },
+      {
+        id: 'default-infraestructura',
+        nombre: 'Infraestructura',
+        icono: 'bi bi-tools',
+        color: '#3b82f6',
+        descripcion: 'Problemas con servicios públicos'
+      },
+      {
+        id: 'default-otros',
         nombre: 'Otros',
         icono: 'bi bi-chat-dots',
         color: '#6b7280',
-        descripcion: 'Otras situaciones que requieren atención'
+        descripcion: 'Otras situaciones'
       }
     ];
   }
 
   private loadUserData(): void {
-    if (typeof Storage !== 'undefined') {
-      const userData = localStorage.getItem('user');
-      if (userData) {
-        try {
-          const user = JSON.parse(userData);
-          this.reporte.idUsuario = user.id || 'user-123'; // ID simulado
-        } catch (error) {
-          console.warn('Error parsing user data:', error);
-          this.reporte.idUsuario = 'user-123'; // ID por defecto
-        }
+    try {
+      const usuario = this.authService.getCurrentUser();
+      if (usuario) {
+        this.reporte.idUsuario = usuario.id;
+        console.log('👤 Usuario cargado:', usuario.nombre);
       } else {
-        this.reporte.idUsuario = 'user-123'; // ID por defecto
+        console.warn('⚠️ No se encontró usuario autenticado');
+        this.reporte.idUsuario = 'usuario-anonimo-' + Date.now();
       }
+    } catch (error) {
+      console.error('❌ Error cargando datos del usuario:', error);
+      this.reporte.idUsuario = 'usuario-error-' + Date.now();
     }
   }
 
@@ -165,9 +256,8 @@ export class CrearReporteComponent implements OnInit, OnDestroy, AfterViewInit {
       if (this.currentStep < this.totalSteps) {
         this.currentStep++;
         
-        // Inicializar mapa cuando llegue al paso 4 (ubicación)
         if (this.currentStep === 4) {
-          setTimeout(() => this.initializeMap(), 100);
+          setTimeout(() => this.initializeMapbox(), 300);
         }
       }
     }
@@ -183,7 +273,7 @@ export class CrearReporteComponent implements OnInit, OnDestroy, AfterViewInit {
     if (step <= this.currentStep || this.validateStepsUpTo(step - 1)) {
       this.currentStep = step;
       if (step === 4) {
-        setTimeout(() => this.initializeMap(), 100);
+        setTimeout(() => this.initializeMapbox(), 300);
       }
     }
   }
@@ -219,18 +309,28 @@ export class CrearReporteComponent implements OnInit, OnDestroy, AfterViewInit {
         break;
 
       case 3: // Prioridad y configuraciones
-        // Validaciones opcionales, ya que tienen valores por defecto
+        // Validaciones opcionales
         break;
 
       case 4: // Ubicación
-        if (!this.reporte.ubicacion.direccion.trim()) {
-          this.formErrors.ubicacion = 'Debe seleccionar una ubicación';
+        if (!this.reporte.ubicacion.latitud || !this.reporte.ubicacion.longitud) {
+          this.formErrors.ubicacion = 'Debe seleccionar una ubicación válida';
           isValid = false;
         }
         break;
 
-      case 5: // Fotos (opcional pero si hay, debe tener al menos una)
-        // Las fotos son opcionales según tu diseño de la imagen
+      case 5: // Fotos
+        // Validar archivos si existen
+        if (this.fotosSeleccionadas.length > 0) {
+          for (const archivo of this.fotosSeleccionadas) {
+            const validacion = this.reporteService.validarArchivoImagen(archivo);
+            if (!validacion.valido) {
+              this.formErrors.fotos = validacion.error;
+              isValid = false;
+              break;
+            }
+          }
+        }
         break;
     }
 
@@ -253,7 +353,6 @@ export class CrearReporteComponent implements OnInit, OnDestroy, AfterViewInit {
   // MANEJO DE PRIORIDAD Y CONFIGURACIONES
   toggleImportante(): void {
     this.reporte.esImportante = !this.reporte.esImportante;
-    // Si es importante, automáticamente establecer prioridad alta
     if (this.reporte.esImportante && this.reporte.prioridad === 'baja') {
       this.reporte.prioridad = 'alta';
     }
@@ -261,43 +360,28 @@ export class CrearReporteComponent implements OnInit, OnDestroy, AfterViewInit {
 
   setPrioridad(prioridad: 'baja' | 'media' | 'alta' | 'critica'): void {
     this.reporte.prioridad = prioridad;
-    // Si es crítica, automáticamente marcar como importante
     if (prioridad === 'critica') {
       this.reporte.esImportante = true;
     }
   }
 
-  toggleAnonimo(): void {
-    this.reporte.esAnonimo = !this.reporte.esAnonimo;
-  }
-
   getPrioridadColor(prioridad: string): string {
     switch (prioridad) {
-      case 'baja':
-        return '#10b981';
-      case 'media':
-        return '#f59e0b';
-      case 'alta':
-        return '#ef4444';
-      case 'critica':
-        return '#dc2626';
-      default:
-        return '#6b7280';
+      case 'baja': return '#10b981';
+      case 'media': return '#f59e0b';
+      case 'alta': return '#ef4444';
+      case 'critica': return '#dc2626';
+      default: return '#6b7280';
     }
   }
 
   getPrioridadIcon(prioridad: string): string {
     switch (prioridad) {
-      case 'baja':
-        return 'bi bi-flag';
-      case 'media':
-        return 'bi bi-flag-fill';
-      case 'alta':
-        return 'bi bi-exclamation-triangle';
-      case 'critica':
-        return 'bi bi-exclamation-triangle-fill';
-      default:
-        return 'bi bi-flag';
+      case 'baja': return 'bi bi-flag';
+      case 'media': return 'bi bi-flag-fill';
+      case 'alta': return 'bi bi-exclamation-triangle';
+      case 'critica': return 'bi bi-exclamation-triangle-fill';
+      default: return 'bi bi-flag';
     }
   }
 
@@ -315,165 +399,259 @@ export class CrearReporteComponent implements OnInit, OnDestroy, AfterViewInit {
         return { color: '#6b7280', icon: 'bi bi-question-circle', texto: 'Desconocido' };
     }
   }
+
   selectCategoria(categoria: Categoria): void {
     this.reporte.categoria = categoria.id;
+    console.log('📋 Categoría seleccionada:', categoria);
   }
 
   getCategoriaSeleccionada(): Categoria | undefined {
     return this.categorias.find(c => c.id === this.reporte.categoria);
   }
 
-  // MANEJO DE UBICACIÓN
+  // MANEJO DE UBICACIÓN CON MAPBOX
   private detectarUbicacionActual(): void {
+    console.log('📍 Detectando ubicación actual...');
     this.isLoadingLocation = true;
     
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
+          console.log('✅ Ubicación detectada:', position.coords);
           this.reporte.ubicacion.latitud = position.coords.latitude;
           this.reporte.ubicacion.longitud = position.coords.longitude;
           this.obtenerDireccionDeLatLng(position.coords.latitude, position.coords.longitude);
           this.isLoadingLocation = false;
+          this.cdr.detectChanges();
         },
         (error) => {
-          console.error('Error obteniendo ubicación:', error);
-          // Ubicación por defecto (Bogotá)
-          this.reporte.ubicacion.latitud = 4.6097;
-          this.reporte.ubicacion.longitud = -74.0817;
-          this.reporte.ubicacion.direccion = 'Bogotá, Colombia';
+          console.error('❌ Error obteniendo ubicación:', error);
+          // Ubicación por defecto (Pereira, Colombia)
+          this.reporte.ubicacion.latitud = 4.8143;
+          this.reporte.ubicacion.longitud = -75.6946;
+          this.reporte.ubicacion.direccion = 'Pereira, Colombia (Ubicación por defecto)';
           this.isLoadingLocation = false;
+          this.cdr.detectChanges();
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 300000
         }
       );
     } else {
-      // Ubicación por defecto
-      this.reporte.ubicacion.latitud = 4.6097;
-      this.reporte.ubicacion.longitud = -74.0817;
-      this.reporte.ubicacion.direccion = 'Bogotá, Colombia';
+      console.warn('⚠️ Geolocalización no disponible');
+      this.reporte.ubicacion.latitud = 4.8143;
+      this.reporte.ubicacion.longitud = -75.6946;
+      this.reporte.ubicacion.direccion = 'Pereira, Colombia (Ubicación por defecto)';
       this.isLoadingLocation = false;
+      this.cdr.detectChanges();
     }
   }
 
-  private obtenerDireccionDeLatLng(lat: number, lng: number): void {
-    if (typeof google !== 'undefined' && google.maps && google.maps.Geocoder) {
-      const geocoder = new google.maps.Geocoder();
-      geocoder.geocode(
-        { location: { lat: lat, lng: lng } },
-        (results: any, status: any) => {
-          if (status === 'OK' && results[0]) {
-            this.reporte.ubicacion.direccion = results[0].formatted_address;
-          } else {
-            this.reporte.ubicacion.direccion = `${lat}, ${lng}`;
-          }
-        }
+  private async obtenerDireccionDeLatLng(lat: number, lng: number): Promise<void> {
+    try {
+      console.log(`🔍 Obteniendo dirección para: ${lat}, ${lng}`);
+      
+      const response = await fetch(
+        `https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?access_token=${this.MAPBOX_TOKEN}&language=es`
       );
-    } else {
-      this.reporte.ubicacion.direccion = `${lat}, ${lng}`;
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.features && data.features.length > 0) {
+          this.reporte.ubicacion.direccion = data.features[0].place_name;
+          console.log('✅ Dirección obtenida:', this.reporte.ubicacion.direccion);
+        } else {
+          this.reporte.ubicacion.direccion = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+        }
+      } else {
+        console.warn('⚠️ Error en geocoding, usando coordenadas');
+        this.reporte.ubicacion.direccion = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+      }
+    } catch (error) {
+      console.error('❌ Error en geocoding:', error);
+      this.reporte.ubicacion.direccion = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+    } finally {
+      this.cdr.detectChanges();
     }
   }
 
-  private initializeMap(): void {
+  private async initializeMapbox(): Promise<void> {
+    console.log('🗺️ Inicializando Mapbox...');
+    
+    if (!this.MAPBOX_TOKEN) {
+      this.mapError = 'Token de Mapbox no configurado';
+      return;
+    }
+
     const mapElement = document.getElementById('map-container');
     if (!mapElement) {
-      console.warn('Elemento del mapa no encontrado');
+      setTimeout(() => this.initializeMapbox(), 500);
       return;
     }
     
     if (this.map) {
-      console.log('Mapa ya inicializado');
-      return;
-    }
-
-    // Esperar un poco más si Google Maps no está listo
-    if (typeof google === 'undefined' || !google.maps) {
-      console.log('Google Maps no disponible, reintentando...');
-      setTimeout(() => this.initializeMap(), 500);
       return;
     }
 
     try {
-      this.map = new google.maps.Map(mapElement, {
-        center: { 
-          lat: this.reporte.ubicacion.latitud, 
-          lng: this.reporte.ubicacion.longitud 
-        },
+      const rect = mapElement.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) {
+        mapElement.style.width = '100%';
+        mapElement.style.height = '400px';
+        mapElement.style.minHeight = '400px';
+        await new Promise(resolve => setTimeout(resolve, 200));
+      }
+
+      this.map = new mapboxgl.Map({
+        container: 'map-container',
+        style: 'mapbox://styles/mapbox/streets-v12',
+        center: [this.reporte.ubicacion.longitud, this.reporte.ubicacion.latitud],
         zoom: 15,
-        mapTypeId: google.maps.MapTypeId.ROADMAP,
-        styles: [
-          {
-            featureType: 'poi',
-            elementType: 'labels',
-            stylers: [{ visibility: 'off' }]
-          }
-        ]
+        attributionControl: false
       });
 
-      this.marker = new google.maps.Marker({
-        position: { 
-          lat: this.reporte.ubicacion.latitud, 
-          lng: this.reporte.ubicacion.longitud 
-        },
-        map: this.map,
-        draggable: true,
-        title: 'Ubicación del reporte',
-        icon: {
-          path: google.maps.SymbolPath.CIRCLE,
-          scale: 10,
-          fillColor: '#ef4444',
-          fillOpacity: 1,
-          strokeColor: '#ffffff',
-          strokeWeight: 3
-        }
+      this.map.on('load', () => {
+        console.log('✅ Mapa cargado');
+        this.agregarControlesMapa();
+        this.crearMarcadorInteractivo();
+        this.isMapReady = true;
+        this.cdr.detectChanges();
       });
 
-      // Actualizar ubicación cuando se mueva el marcador
-      this.marker.addListener('dragend', () => {
-        const position = this.marker.getPosition();
-        this.reporte.ubicacion.latitud = position.lat();
-        this.reporte.ubicacion.longitud = position.lng();
-        this.obtenerDireccionDeLatLng(position.lat(), position.lng());
+      this.map.on('error', (error) => {
+        console.error('❌ Error en mapa:', error);
+        this.mapError = 'Error cargando el mapa';
+        this.cdr.detectChanges();
       });
 
-      // Permitir hacer clic en el mapa para mover el marcador
-      this.map.addListener('click', (event: any) => {
-        this.marker.setPosition(event.latLng);
-        this.reporte.ubicacion.latitud = event.latLng.lat();
-        this.reporte.ubicacion.longitud = event.latLng.lng();
-        this.obtenerDireccionDeLatLng(event.latLng.lat(), event.latLng.lng());
+      this.map.on('click', (e) => {
+        this.actualizarUbicacion(e.lngLat.lat, e.lngLat.lng);
       });
 
-      this.isMapReady = true;
-      console.log('Mapa inicializado correctamente');
-      
     } catch (error) {
-      console.error('Error inicializando mapa:', error);
+      console.error('❌ Error inicializando Mapbox:', error);
+      this.mapError = 'Error inicializando el mapa';
+      this.cdr.detectChanges();
     }
   }
 
-  detectarUbicacionActualEnMapa(): void {
-    this.detectarUbicacionActual();
-    setTimeout(() => {
-      if (this.map && this.marker) {
-        const newPosition = { 
-          lat: this.reporte.ubicacion.latitud, 
-          lng: this.reporte.ubicacion.longitud 
-        };
-        this.map.setCenter(newPosition);
-        this.marker.setPosition(newPosition);
-      } else {
-        // Si el mapa no existe, lo inicializamos
-        this.initializeMap();
-      }
-    }, 1000);
+  private agregarControlesMapa(): void {
+    if (!this.map) return;
+
+    try {
+      this.map.addControl(new mapboxgl.NavigationControl(), 'top-right');
+      
+      const geolocateControl = new mapboxgl.GeolocateControl({
+        positionOptions: { enableHighAccuracy: true },
+        trackUserLocation: false,
+        showUserHeading: false
+      });
+      
+      this.map.addControl(geolocateControl, 'top-right');
+
+      geolocateControl.on('geolocate', (e: any) => {
+        this.actualizarUbicacion(e.coords.latitude, e.coords.longitude);
+      });
+
+      console.log('✅ Controles agregados');
+    } catch (error) {
+      console.error('❌ Error agregando controles:', error);
+    }
   }
 
-  // Método para forzar inicialización del mapa
+  private crearMarcadorInteractivo(): void {
+    if (!this.map) return;
+
+    try {
+      this.marker = new mapboxgl.Marker({
+        color: '#ef4444',
+        draggable: true,
+        scale: 1.2
+      })
+      .setLngLat([this.reporte.ubicacion.longitud, this.reporte.ubicacion.latitud])
+      .addTo(this.map);
+
+      this.marker.on('dragend', () => {
+        if (this.marker) {
+          const lngLat = this.marker.getLngLat();
+          this.actualizarUbicacion(lngLat.lat, lngLat.lng);
+        }
+      });
+
+      console.log('✅ Marcador creado');
+    } catch (error) {
+      console.error('❌ Error creando marcador:', error);
+    }
+  }
+
+  private actualizarUbicacion(lat: number, lng: number): void {
+    console.log(`📍 Actualizando ubicación: ${lat}, ${lng}`);
+    
+    this.reporte.ubicacion.latitud = lat;
+    this.reporte.ubicacion.longitud = lng;
+    
+    if (this.marker) {
+      this.marker.setLngLat([lng, lat]);
+    }
+    
+    this.obtenerDireccionDeLatLng(lat, lng);
+  }
+
+  detectarUbicacionActualEnMapa(): void {
+    this.isLoadingLocation = true;
+    
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const lat = position.coords.latitude;
+          const lng = position.coords.longitude;
+          
+          this.actualizarUbicacion(lat, lng);
+          
+          if (this.map) {
+            this.map.flyTo({
+              center: [lng, lat],
+              zoom: 16,
+              duration: 1500
+            });
+          }
+          
+          this.isLoadingLocation = false;
+          this.cdr.detectChanges();
+        },
+        (error) => {
+          console.error('❌ Error detectando ubicación:', error);
+          this.isLoadingLocation = false;
+          this.cdr.detectChanges();
+        }
+      );
+    }
+  }
+
   forceMapInitialization(): void {
-    if (this.currentStep === 4) {
-      this.map = null; // Reset
-      this.marker = null; // Reset
-      setTimeout(() => {
-        this.initializeMap();
-      }, 100);
+    this.destroyMap();
+    this.mapError = '';
+    setTimeout(() => this.initializeMapbox(), 300);
+  }
+
+  private destroyMap(): void {
+    if (this.map) {
+      try {
+        if (this.marker) {
+          this.marker.remove();
+          this.marker = null;
+        }
+        this.map.remove();
+        this.map = null;
+        this.isMapReady = false;
+      } catch (error) {
+        console.error('❌ Error destruyendo mapa:', error);
+        this.map = null;
+        this.marker = null;
+        this.isMapReady = false;
+      }
     }
   }
 
@@ -481,69 +659,118 @@ export class CrearReporteComponent implements OnInit, OnDestroy, AfterViewInit {
   onFileSelected(event: any): void {
     const files = Array.from(event.target.files) as File[];
     
+    // Limpiar errores previos
+    delete this.formErrors.fotos;
+    
     files.forEach(file => {
-      if (file.type.startsWith('image/')) {
-        this.fotosSeleccionadas.push(file);
-        
-        // Crear preview
-        const reader = new FileReader();
-        reader.onload = (e: any) => {
-          this.previewUrls.push(e.target.result);
-        };
-        reader.readAsDataURL(file);
+      // Validar archivo
+      const validacion = this.reporteService.validarArchivoImagen(file);
+      if (!validacion.valido) {
+        this.formErrors.fotos = validacion.error;
+        return;
       }
+
+      this.fotosSeleccionadas.push(file);
+      
+      // Crear preview
+      const reader = new FileReader();
+      reader.onload = (e: any) => {
+        this.previewUrls.push(e.target.result);
+        this.cdr.detectChanges();
+      };
+      reader.readAsDataURL(file);
     });
+
+    console.log(`📸 ${this.fotosSeleccionadas.length} foto(s) seleccionada(s)`);
   }
 
   removePhoto(index: number): void {
     this.fotosSeleccionadas.splice(index, 1);
     this.previewUrls.splice(index, 1);
+    delete this.formErrors.fotos;
   }
 
-  // ENVÍO DEL FORMULARIO
+  // ENVÍO DEL FORMULARIO CON BACKEND
   async submitReporte(): Promise<void> {
+    console.log('📤 Iniciando envío de reporte al backend...');
+    
     if (!this.validateCurrentStep()) {
+      console.warn('⚠️ Validación fallida');
+      return;
+    }
+
+    if (!this.reporte.ubicacion.latitud || !this.reporte.ubicacion.longitud) {
+      this.formErrors.general = 'Debe seleccionar una ubicación válida';
+      return;
+    }
+
+    // Verificar autenticación antes de proceder
+    if (!this.verificarAutenticacion()) {
       return;
     }
 
     this.isSubmitting = true;
+    this.formErrors = {};
+    this.uploadProgress = 0;
+    this.currentUploadStep = 'Verificando autenticación...';
+    this.cdr.detectChanges();
 
     try {
-      // Simular subida de fotos
-      const fotosUrls: string[] = [];
-      for (let i = 0; i < this.fotosSeleccionadas.length; i++) {
-        // En producción, aquí subirías las fotos a tu servidor/cloud
-        fotosUrls.push(`https://mi-servidor.com/fotos/reporte-${Date.now()}-${i}.jpg`);
+      // Verificar que tenemos los datos necesarios
+      if (!this.reporte.idUsuario && !this.reporte.esAnonimo) {
+        const usuario = this.authService.getCurrentUser();
+        if (usuario) {
+          this.reporte.idUsuario = usuario.id;
+        } else {
+          throw new Error('No se pudo obtener información del usuario');
+        }
       }
-      
-      this.reporte.fotos = fotosUrls;
 
-      // Simular envío al servidor
-      await this.enviarReporteAlServidor(this.reporte);
+      // Usar el servicio para procesar la creación completa
+      this.currentUploadStep = 'Procesando reporte...';
+      this.uploadProgress = 10;
+      this.cdr.detectChanges();
+
+      const reporteId = await this.reporteService.procesarCreacionReporte(
+        this.reporte,
+        this.fotosSeleccionadas,
+        this.reporte.esAnonimo,
+        this.reporte.esImportante,
+        this.reporte.idUsuario
+      );
+
+      console.log('🎉 Reporte creado exitosamente con ID:', reporteId);
       
+      this.currentUploadStep = 'Reporte enviado exitosamente';
+      this.uploadProgress = 100;
       this.showSuccessMessage = true;
       
       // Redirigir después de 3 segundos
       setTimeout(() => {
-        this.router.navigate(['/mis-reportes']);
+        this.router.navigate(['/principal-cliente']);
       }, 3000);
 
-    } catch (error) {
-      console.error('Error enviando reporte:', error);
-      this.formErrors.general = 'Error al enviar el reporte. Por favor, inténtalo de nuevo.';
+    } catch (error: any) {
+      console.error('❌ Error enviando reporte:', error);
+      
+      // Manejar errores específicos de autenticación
+      if (error.message.includes('autenticado') || error.message.includes('permisos')) {
+        this.formErrors.general = error.message;
+        
+        // Redirigir al login después de mostrar el error
+        setTimeout(() => {
+          this.authService.logout();
+          this.router.navigate(['/login'], { 
+            queryParams: { returnUrl: '/crear-reporte' }
+          });
+        }, 3000);
+      } else {
+        this.formErrors.general = error.message || 'Error al enviar el reporte. Por favor, inténtalo de nuevo.';
+      }
     } finally {
       this.isSubmitting = false;
+      this.cdr.detectChanges();
     }
-  }
-
-  private async enviarReporteAlServidor(reporte: CrearReporteDTO): Promise<void> {
-    // Simular llamada HTTP
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        console.log('Reporte enviado:', reporte);
-        resolve();
-      }, 2000);
-    });
   }
 
   // NAVEGACIÓN
@@ -560,5 +787,49 @@ export class CrearReporteComponent implements OnInit, OnDestroy, AfterViewInit {
 
   isStepAccessible(step: number): boolean {
     return step <= this.currentStep || this.validateStepsUpTo(step - 1);
+  }
+
+  // DEBUGGING
+  debugInfo(): void {
+    console.log('🐛 Estado actual:', {
+      currentStep: this.currentStep,
+      reporte: this.reporte,
+      categorias: this.categorias.length,
+      categoriasBackend: this.categoriasBackend.length,
+      fotos: this.fotosSeleccionadas.length,
+      mapReady: this.isMapReady,
+      errors: this.formErrors
+    });
+  }
+
+
+  // Método para verificar autenticación antes de enviar
+  private verificarAutenticacion(): boolean {
+    if (!this.authService.isAuthenticated()) {
+      this.formErrors.general = 'Tu sesión ha expirado. Por favor, inicia sesión nuevamente.';
+      
+      setTimeout(() => {
+        this.router.navigate(['/login'], { 
+          queryParams: { returnUrl: '/crear-reporte' }
+        });
+      }, 2000);
+      
+      return false;
+    }
+
+    if (this.authService.isSessionExpiringSoon()) {
+      this.formErrors.general = 'Tu sesión ha expirado. Redirigiendo al login...';
+      
+      setTimeout(() => {
+        this.authService.logout();
+        this.router.navigate(['/login'], { 
+          queryParams: { returnUrl: '/crear-reporte' }
+        });
+      }, 2000);
+      
+      return false;
+    }
+
+    return true;
   }
 }

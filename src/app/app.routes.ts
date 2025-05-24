@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { AuthGuard } from './guards/auth.guard';
 
 // ===== PÁGINAS DE AUTENTICACIÓN Y REGISTRO =====
 import { InicioSesionComponent } from './paginas/inicio-sesion/inicio-sesion.component';
@@ -23,9 +24,10 @@ import { ReportesPropiosComponent } from './paginas/reportes-propios/reportes-pr
 export const routes: Routes = [
   
   // ===== RUTA RAÍZ =====
-  { path: '', redirectTo: '/login', pathMatch: 'full' },
+  { path: '', redirectTo: '/home', pathMatch: 'full' },
 
-  // ===== AUTENTICACIÓN Y REGISTRO =====
+  // ===== RUTAS PÚBLICAS (SIN PROTECCIÓN) =====
+  { path: 'home', component: HomeComponent },
   { path: 'login', component: InicioSesionComponent },
   { path: 'registro', component: RegistroComponent },
   { path: 'registro-exitoso', component: RegistroExitosoComponent },
@@ -37,17 +39,46 @@ export const routes: Routes = [
   { path: 'modificar-contrasenia-exitoso', component: ModificarContraseniaExitosoComponent },
   { path: 'cambiar-contrasenia', component: CambiarContraseniaComponent },
 
-  // ===== DASHBOARDS PRINCIPALES =====
-  { path: 'home', component: HomeComponent },
-  { path: 'principal-cliente', component: PrincipalClienteComponent },
-  { path: 'dashboard', component: PrincipalClienteComponent }, // Alias para principal-cliente
+  // ===== DASHBOARDS - PROTEGIDOS POR ROL =====
+  { 
+    path: 'principal-cliente', 
+    component: PrincipalClienteComponent,
+    canActivate: [AuthGuard],
+    data: { role: 'CLIENTE' }
+  },
+  { 
+    path: 'dashboard', 
+    component: PrincipalClienteComponent,
+    canActivate: [AuthGuard],
+    data: { role: 'CLIENTE' }
+  },
 
-  // ===== GESTIÓN DE REPORTES =====
-  { path: 'crear-reporte', component: CrearReporteComponent },
-  { path: 'detalle-reporte', component: DetalleReporteComponent },
-  { path: 'mis-reportes', component: MisReportesComponent },
-  { path: 'reportes-propios', component: ReportesPropiosComponent }, // ← ESTA ES LA RUTA NUEVA
-
+  // ===== GESTIÓN DE REPORTES - PROTEGIDAS =====
+  { 
+    path: 'crear-reporte', 
+    component: CrearReporteComponent,
+    canActivate: [AuthGuard],
+    data: { role: 'CLIENTE' }
+  },
+  { 
+    path: 'detalle-reporte', 
+    component: DetalleReporteComponent,
+    canActivate: [AuthGuard],
+    data: { role: 'CLIENTE' }
+  },
+  { 
+    path: 'mis-reportes', 
+    component: MisReportesComponent,
+    canActivate: [AuthGuard],
+    data: { role: 'CLIENTE' }
+  },
+  { 
+    path: 'reportes-propios', 
+    component: ReportesPropiosComponent,
+    canActivate: [AuthGuard],
+    data: { role: 'CLIENTE' }
+  },
+  
   // ===== RUTA WILDCARD (DEBE IR AL FINAL) =====
   { path: '**', redirectTo: '/home' }
 ];

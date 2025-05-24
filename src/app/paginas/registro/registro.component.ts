@@ -2,22 +2,7 @@ import { Component } from '@angular/core';
 import { FormBuilder, FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
-
-// Interfaces para el registro
-export interface RegistroRequest {
-  nombre: string;
-  telefono: string;
-  ciudad: string;
-  direccion: string;
-  email: string;
-  password: string;
-}
-
-export interface RegistroResponse {
-  success: boolean;
-  message: string;
-  userId?: string;
-}
+import { UsuarioService, RegistroRequest, RegistroResponse } from '../../servicios/usuario.service'; // Ajusta la ruta según tu estructura
 
 @Component({
   selector: 'app-registro',
@@ -39,7 +24,8 @@ export class RegistroComponent {
 
   constructor(
     private formBuilder: FormBuilder,
-    private router: Router
+    private router: Router,
+    private usuarioService: UsuarioService // Inyectar el servicio
   ) { 
     this.crearFormulario();
   }
@@ -65,71 +51,45 @@ export class RegistroComponent {
       password: this.registroForm.get('password')?.value
     };
 
-    console.log('Datos de registro:', registroData);
+    console.log('Enviando datos de registro:', registroData);
 
-    // Simular llamada al servicio (reemplaza con tu servicio real)
-    this.simulateRegister(registroData);
-
-    // Implementación real con tu servicio:
-    /*
-    this.authService.register(registroData)
+    // Llamada real al servicio
+    this.usuarioService.registrarUsuario(registroData)
       .subscribe({
-        next: (response: RegistroResponse) => {
+        next: (response) => {
           this.handleRegisterSuccess(response);
         },
         error: (error) => {
           this.handleRegisterError(error);
         }
       });
-    */
-  }
-
-  private simulateRegister(registroData: RegistroRequest): void {
-    // Simulación para desarrollo (remover en producción)
-    setTimeout(() => {
-      // Simular diferentes escenarios
-      if (registroData.email === 'error@test.com') {
-        this.handleRegisterError({
-          error: { message: 'Este email ya está registrado' }
-        });
-      } else {
-        const mockResponse: RegistroResponse = {
-          success: true,
-          message: 'Usuario registrado exitosamente',
-          userId: 'user-' + Date.now()
-        };
-        this.handleRegisterSuccess(mockResponse);
-      }
-    }, 2000);
   }
 
   private handleRegisterSuccess(response: RegistroResponse): void {
     this.isLoading = false;
     console.log('Registro exitoso:', response);
     
-    // Redirigir a la página de registro exitoso
-    this.router.navigate(['/registro-exitoso'], {
-      queryParams: { 
-        email: this.registroForm.get('email')?.value,
-        nombre: this.registroForm.get('nombre')?.value
-      }
-    });
+    // Mostrar mensaje de éxito si es necesario
+    if (!response.error) {
+      console.log('Mensaje del servidor:', response.mensaje);
+      
+      // Redirigir a la página de registro exitoso
+      this.router.navigate(['/registro-exitoso'], {
+        queryParams: { 
+          email: this.registroForm.get('email')?.value,
+          nombre: this.registroForm.get('nombre')?.value,
+          mensaje: response.mensaje
+        }
+      });
+    } else {
+      // Si por alguna razón viene error: true, tratarlo como error
+      this.errorMessage = response.mensaje || 'Error en el registro';
+    }
   }
 
   private handleRegisterError(error: any): void {
     this.isLoading = false;
-    
-    // Manejar diferentes tipos de errores
-    if (error.status === 400) {
-      this.errorMessage = 'Datos inválidos. Verifica la información ingresada.';
-    } else if (error.status === 409) {
-      this.errorMessage = 'Este email ya está registrado. Usa otro email.';
-    } else if (error.status === 0) {
-      this.errorMessage = 'Error de conexión. Verifica tu conexión a internet.';
-    } else {
-      this.errorMessage = error.error?.message || 'Error inesperado. Inténtalo de nuevo.';
-    }
-
+    this.errorMessage = error.message || 'Error inesperado. Inténtalo de nuevo.';
     console.error('Error en registro:', error);
   }
 
@@ -143,8 +103,6 @@ export class RegistroComponent {
   public passwordsMatchValidator(formGroup: FormGroup) {
     const password = formGroup.get('password')?.value;
     const confirmarPassword = formGroup.get('confirmarPassword')?.value;
-
-    // Si las contraseñas no coinciden, devuelve un error, de lo contrario, null
     return password == confirmarPassword ? null : { passwordsMismatch: true };
   }
 
@@ -157,9 +115,7 @@ export class RegistroComponent {
       email: ['', [Validators.required, Validators.email]],     
       password: ['', [Validators.required, Validators.maxLength(20), Validators.minLength(6)]],
       confirmarPassword: ['', [Validators.required]]
-    },
-      { validators: this.passwordsMatchValidator }
-    );
+    }, { validators: this.passwordsMatchValidator });
   }
 
   // Métodos para mostrar/ocultar contraseñas
@@ -172,25 +128,11 @@ export class RegistroComponent {
   }
 
   // Getters para el template
-  get nombreControl() {
-    return this.registroForm.get('nombre');
-  }
-
-  get telefonoControl() {
-    return this.registroForm.get('telefono');
-  }
-
-  get emailControl() {
-    return this.registroForm.get('email');
-  }
-
-  get passwordControl() {
-    return this.registroForm.get('password');
-  }
-
-  get confirmarPasswordControl() {
-    return this.registroForm.get('confirmarPassword');
-  }
+  get nombreControl() { return this.registroForm.get('nombre'); }
+  get telefonoControl() { return this.registroForm.get('telefono'); }
+  get emailControl() { return this.registroForm.get('email'); }
+  get passwordControl() { return this.registroForm.get('password'); }
+  get confirmarPasswordControl() { return this.registroForm.get('confirmarPassword'); }
 
   // Método para ir al login
   goToLogin(): void {

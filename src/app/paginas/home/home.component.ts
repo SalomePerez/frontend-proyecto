@@ -1,7 +1,7 @@
-// home.component.ts
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
+import { AuthService } from '../../servicios/auth.service'; // Ajustar ruta según tu estructura
 
 @Component({
   selector: 'app-home',
@@ -15,15 +15,25 @@ export class HomeComponent implements OnInit, OnDestroy {
   // Propiedades del componente
   isLoading = false;
   showWelcomeAnimation = false;
+  isCheckingAuth = true; // Estado para verificar autenticación
 
-  constructor(private router: Router) {}
+  constructor(
+    private router: Router,
+    private authService: AuthService // Inyectar AuthService
+  ) {}
 
   ngOnInit(): void {
-    // Inicializar animaciones de bienvenida
-    this.initializeWelcomeAnimation();
+    // PRIMERA PRIORIDAD: Verificar si hay sesión activa
+    this.checkActiveSession();
     
-    // Precargar imágenes si es necesario
-    this.preloadImages();
+    // Solo inicializar si no hay sesión activa
+    setTimeout(() => {
+      if (!this.authService.isAuthenticated()) {
+        this.initializeWelcomeAnimation();
+        this.preloadImages();
+        this.getCurrentLocation();
+      }
+    }, 100);
   }
 
   ngOnDestroy(): void {
@@ -31,9 +41,67 @@ export class HomeComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Navegar a la página de registro - RUTA CORREGIDA
+   * Verificar si hay sesión activa y redirigir según rol
+   */
+  checkActiveSession(): void {
+    console.log('Verificando sesión activa...');
+    
+    // Usar AuthService en lugar de localStorage directo
+    if (this.authService.isAuthenticated()) {
+      const usuario = this.authService.getCurrentUser();
+      
+      if (usuario) {
+        console.log('Usuario autenticado detectado:', usuario);
+        this.isCheckingAuth = false;
+        
+        // Redirigir según el rol del usuario
+        this.redirectToUserDashboard(usuario.rol);
+        return;
+      }
+    }
+
+    // Si no hay sesión activa o el token expiró
+    console.log('No hay sesión activa o token expirado');
+    this.isCheckingAuth = false;
+    
+    // Limpiar cualquier dato corrupto
+    if (this.authService.getToken() && !this.authService.isTokenValid()) {
+      console.log('Token expirado, limpiando sesión...');
+      this.authService.logout();
+    }
+  }
+
+  /**
+   * Redirigir al dashboard apropiado según el rol
+   */
+  private redirectToUserDashboard(rol: string): void {
+    switch (rol.toUpperCase()) {
+      case 'ADMINISTRADOR':
+      case 'ADMIN':
+        console.log('Redirigiendo a dashboard de administrador...');
+        // Redirigir a ruta de admin cuando la tengas
+        this.router.navigate(['/admin-dashboard']); // Cambiar cuando tengas la ruta
+        break;
+        
+      case 'CLIENTE':
+      case 'USER':
+        console.log('Redirigiendo a dashboard de cliente...');
+        this.router.navigate(['/principal-cliente']);
+        break;
+        
+      default:
+        console.log('Rol no reconocido:', rol, '- Redirigiendo a dashboard de cliente...');
+        this.router.navigate(['/principal-cliente']);
+        break;
+    }
+  }
+
+  /**
+   * Navegar a la página de registro
    */
   navigateToRegister(): void {
+    if (this.isCheckingAuth) return; // Evitar navegación durante verificación
+    
     try {
       this.isLoading = true;
       console.log('Navegando a registro...');
@@ -45,9 +113,11 @@ export class HomeComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Navegar a la página de login - RUTA CORREGIDA
+   * Navegar a la página de login
    */
   navigateToLogin(): void {
+    if (this.isCheckingAuth) return; // Evitar navegación durante verificación
+    
     try {
       this.isLoading = true;
       console.log('Navegando a login...');
@@ -62,9 +132,20 @@ export class HomeComponent implements OnInit, OnDestroy {
    * Mostrar acciones rápidas (botón flotante)
    */
   showQuickActions(): void {
+    if (this.isCheckingAuth) return;
+    
     console.log('Mostrando acciones rápidas...');
     
-    // Mostrar opciones disponibles
+    // Si el usuario ya está autenticado, redirigir a su dashboard
+    if (this.authService.isAuthenticated()) {
+      const usuario = this.authService.getCurrentUser();
+      if (usuario) {
+        this.redirectToUserDashboard(usuario.rol);
+        return;
+      }
+    }
+    
+    // Si no está autenticado, mostrar opciones
     const actions = [
       { 
         label: 'Ir a Registro', 
@@ -75,15 +156,9 @@ export class HomeComponent implements OnInit, OnDestroy {
         label: 'Ir a Login', 
         action: () => this.navigateToLogin(),
         icon: 'fa-sign-in-alt'
-      },
-      { 
-        label: 'Ver Principal Cliente (Demo)', 
-        action: () => this.navigateToPrincipalCliente(),
-        icon: 'fa-home'
       }
     ];
 
-    // Por ahora mostrar en consola, puedes implementar un modal después
     console.log('Acciones disponibles:', actions);
     
     // Acción por defecto: ir a registro
@@ -91,17 +166,30 @@ export class HomeComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Navegar al dashboard principal (para demo)
+   * Verificar estado de autenticación (método público para el template)
    */
-  navigateToPrincipalCliente(): void {
-    try {
-      this.isLoading = true;
-      console.log('Navegando al dashboard principal...');
-      this.router.navigate(['/principal-cliente']);
-    } catch (error) {
-      console.error('Error navegando al dashboard:', error);
-      this.isLoading = false;
-    }
+  isAuthenticated(): boolean {
+    return this.authService.isAuthenticated();
+  }
+
+  /**
+   * Obtener datos del usuario actual (método público para el template)
+   */
+  getCurrentUser(): any {
+    return this.authService.getCurrentUser();
+  }
+
+  /**
+   * Cerrar sesión
+   */
+  logout(): void {
+    console.log('Cerrando sesión...');
+    this.authService.logout();
+    
+    // Recargar el componente para mostrar el estado no autenticado
+    this.isCheckingAuth = false;
+    this.showWelcomeAnimation = false;
+    this.initializeWelcomeAnimation();
   }
 
   /**
@@ -137,12 +225,9 @@ export class HomeComponent implements OnInit, OnDestroy {
     const target = event.target as HTMLImageElement;
     console.warn('Error cargando imagen:', target.src);
     
-    // Establecer imagen por defecto o placeholder
     if (target.src.includes('logo.png')) {
-      // Si falla el logo, usar un ícono por defecto
       target.style.display = 'none';
     } else if (target.src.includes('mapa.png')) {
-      // Si falla el mapa, usar un color de fondo
       target.style.backgroundColor = '#e5e7eb';
       target.alt = 'Mapa no disponible';
     }
@@ -155,15 +240,6 @@ export class HomeComponent implements OnInit, OnDestroy {
     const target = event.target as HTMLImageElement;
     console.log('Imagen cargada correctamente:', target.src);
     target.style.opacity = '1';
-  }
-
-  /**
-   * Método para manejar clics en el mapa (si necesitas interactividad)
-   */
-  onMapClick(event: MouseEvent): void {
-    console.log('Click en mapa:', event);
-    // Implementar lógica de interacción con el mapa si es necesario
-    // Por ejemplo, mostrar información de la ubicación clickeada
   }
 
   /**
@@ -186,12 +262,10 @@ export class HomeComponent implements OnInit, OnDestroy {
           };
           console.log('Ubicación actual:', location);
           
-          // Usar la ubicación para personalizar la experiencia
           this.personalizeByLocation(location);
         },
         (error) => {
           console.warn('Error obteniendo ubicación:', error.message);
-          // Usar ubicación por defecto (ej: Bogotá)
           this.personalizeByLocation({ lat: 4.6097, lng: -74.0817 });
         },
         {
@@ -210,33 +284,5 @@ export class HomeComponent implements OnInit, OnDestroy {
    */
   private personalizeByLocation(location: { lat: number, lng: number }): void {
     console.log('Personalizando experiencia para ubicación:', location);
-    // Aquí puedes implementar lógica para mostrar información relevante
-    // según la ubicación del usuario
-  }
-
-  /**
-   * Verificar si hay sesión activa
-   */
-  checkActiveSession(): void {
-    const token = localStorage.getItem('token');
-    const userData = localStorage.getItem('user');
-    
-    if (token && userData) {
-      console.log('Sesión activa detectada');
-      // Redirigir al dashboard apropiado
-      try {
-        const user = JSON.parse(userData);
-        if (user.rol === 'cliente') {
-          this.router.navigate(['/principal-cliente']);
-        } else if (user.rol === 'admin') {
-          this.router.navigate(['/inicio-admin']);
-        }
-      } catch (error) {
-        console.error('Error parseando datos de usuario:', error);
-        // Limpiar datos corruptos
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-      }
-    }
   }
 }
