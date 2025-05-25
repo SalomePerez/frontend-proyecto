@@ -21,7 +21,6 @@ import { DetalleReporteComponent } from './paginas/detalle-reporte/detalle-repor
 import { MisReportesComponent } from './paginas/mis-reportes/mis-reportes.component';
 import { ReportesPropiosComponent } from './paginas/reportes-propios/reportes-propios.component';
 import { EditarReporteComponent } from './paginas/editar-reporte/editar-reporte.component';
-import { DetalleReporteSubidosComponent } from './paginas/detalles-reportes-subidos/detalles-reportes-subidos.component';
 
 
 export const routes: Routes = [
@@ -83,10 +82,6 @@ export const routes: Routes = [
   data: { role: 'CLIENTE' }
 },
 
-  {
-  path: 'detalle-reporte-subidos',
-  component: DetalleReporteSubidosComponent
-},
 
   { 
     path: 'reportes-propios', 
