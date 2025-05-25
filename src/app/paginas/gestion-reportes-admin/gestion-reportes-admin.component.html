@@ -1,0 +1,357 @@
+<div class="gestion-reportes-container">
+  <!-- Header -->
+  <header class="page-header">
+    <div class="header-content">
+      <div class="header-left">
+        <button class="back-btn" (click)="volverAlDashboard()">
+          <i class="bi bi-arrow-left"></i>
+        </button>
+        <div class="header-info">
+          <h1 class="page-title">
+            <i class="bi bi-folder-check"></i>
+            Gestión de Reportes
+          </h1>
+          <p class="page-subtitle">Administrar y procesar reportes ciudadanos</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button class="refresh-btn" (click)="cargarReportes()" [disabled]="isLoading">
+          <i class="bi bi-arrow-clockwise" [class.spinning]="isLoading"></i>
+          Actualizar
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Filtros y búsqueda -->
+  <section class="filters-section">
+    <div class="filters-container">
+      
+      <!-- Barra de búsqueda -->
+      <div class="search-group">
+        <div class="search-input-container">
+          <i class="bi bi-search search-icon"></i>
+          <input 
+            type="text" 
+            class="search-input" 
+            placeholder="Buscar por título, descripción o usuario..." 
+            [(ngModel)]="filtros.busqueda"
+            (input)="aplicarFiltros()">
+        </div>
+      </div>
+
+      <!-- Filtros principales -->
+      <div class="filters-grid">
+        <!-- Estado -->
+        <div class="filter-group">
+          <label class="filter-label">Estado</label>
+          <select class="filter-select" [(ngModel)]="filtros.estado" (change)="aplicarFiltros()">
+            <option *ngFor="let estado of estadosDisponibles" [value]="estado.valor">
+              {{ estado.etiqueta }}
+            </option>
+          </select>
+        </div>
+
+        <!-- Ciudad -->
+        <div class="filter-group">
+          <label class="filter-label">Ciudad</label>
+          <select class="filter-select" [(ngModel)]="filtros.ciudad" (change)="aplicarFiltros()">
+            <option *ngFor="let ciudad of ciudadesDisponibles" [value]="ciudad.valor">
+              {{ ciudad.etiqueta }}
+            </option>
+          </select>
+        </div>
+
+        <!-- Fecha desde -->
+        <div class="filter-group">
+          <label class="filter-label">Desde</label>
+          <input 
+            type="date" 
+            class="filter-input" 
+            [(ngModel)]="filtros.fechaDesde"
+            (change)="aplicarFiltros()">
+        </div>
+
+        <!-- Fecha hasta -->
+        <div class="filter-group">
+          <label class="filter-label">Hasta</label>
+          <input 
+            type="date" 
+            class="filter-input" 
+            [(ngModel)]="filtros.fechaHasta"
+            (change)="aplicarFiltros()">
+        </div>
+
+        <!-- Ordenar por -->
+        <div class="filter-group">
+          <label class="filter-label">Ordenar por</label>
+          <select class="filter-select" [(ngModel)]="filtros.ordenarPor" (change)="aplicarFiltros()">
+            <option *ngFor="let opcion of opcionesOrden" [value]="opcion.valor">
+              {{ opcion.etiqueta }}
+            </option>
+          </select>
+        </div>
+
+        <!-- Dirección -->
+        <div class="filter-group">
+          <label class="filter-label">Dirección</label>
+          <select class="filter-select" [(ngModel)]="filtros.direccion" (change)="aplicarFiltros()">
+            <option value="desc">Descendente</option>
+            <option value="asc">Ascendente</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Acciones de filtros -->
+      <div class="filters-actions">
+        <button class="clear-filters-btn" (click)="limpiarFiltros()">
+          <i class="bi bi-x-circle"></i>
+          Limpiar Filtros
+        </button>
+        <div class="results-info">
+          <span class="results-count">{{ reportesFiltrados.length }} resultados</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Contenido principal -->
+  <main class="main-content">
+    
+    <!-- Estado de carga -->
+    <div class="loading-container" *ngIf="isLoading">
+      <div class="loading-content">
+        <div class="spinner"></div>
+        <p>Cargando reportes...</p>
+      </div>
+    </div>
+
+    <!-- Error -->
+    <div class="error-container" *ngIf="error && !isLoading">
+      <div class="error-content">
+        <i class="bi bi-exclamation-triangle"></i>
+        <h3>Error al cargar reportes</h3>
+        <p>{{ error }}</p>
+        <button class="retry-btn" (click)="cargarReportes()">
+          <i class="bi bi-arrow-clockwise"></i>
+          Reintentar
+        </button>
+      </div>
+    </div>
+
+    <!-- Lista de reportes -->
+    <div class="reportes-container" *ngIf="!isLoading && !error">
+      
+      <!-- Sin resultados -->
+      <div class="no-results" *ngIf="reportesFiltrados.length === 0">
+        <div class="no-results-content">
+          <i class="bi bi-inbox"></i>
+          <h3>No se encontraron reportes</h3>
+          <p>Intenta ajustar los filtros de búsqueda</p>
+        </div>
+      </div>
+
+      <!-- Tabla de reportes -->
+      <div class="reportes-table-container" *ngIf="reportesFiltrados.length > 0">
+        <table class="reportes-table">
+          <thead>
+            <tr>
+              <th>Reporte</th>
+              <th>Usuario</th>
+              <th>Estado</th>
+              <th>Prioridad</th>
+              <th>Fecha</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let reporte of reportesPaginaActual" class="reporte-row">
+              
+              <!-- Información del reporte -->
+              <td class="reporte-info">
+                <div class="reporte-titulo">{{ reporte.titulo }}</div>
+                <div class="reporte-descripcion">{{ reporte.descripcion | slice:0:80 }}...</div>
+                <div class="reporte-ubicacion">
+                  <i class="bi bi-geo-alt"></i>
+                  {{ reporte.ciudad }}
+                </div>
+              </td>
+
+              <!-- Usuario -->
+              <td class="reporte-usuario">
+                <div class="usuario-info">
+                  <div class="usuario-nombre" *ngIf="!reporte.esAnonimo">
+                    <i class="bi bi-person"></i>
+                    {{ reporte.nombreUsuario }}
+                  </div>
+                  <div class="usuario-anonimo" *ngIf="reporte.esAnonimo">
+                    <i class="bi bi-incognito"></i>
+                    Anónimo
+                  </div>
+                </div>
+              </td>
+
+              <!-- Estado -->
+              <td class="reporte-estado">
+                <span class="estado-badge" [class]="getEstadoClass(reporte.estadoActual)">
+                  {{ getEstadoEtiqueta(reporte.estadoActual) }}
+                </span>
+              </td>
+
+              <!-- Prioridad -->
+              <td class="reporte-prioridad">
+                <div class="prioridad-container">
+                  <span class="prioridad-badge" [class]="getNivelPrioridad(reporte.contadorImportante).clase">
+                    {{ getNivelPrioridad(reporte.contadorImportante).etiqueta }}
+                  </span>
+                  <div class="prioridad-contador">
+                    <i class="bi bi-star-fill"></i>
+                    {{ reporte.contadorImportante }}
+                  </div>
+                </div>
+              </td>
+
+              <!-- Fecha -->
+              <td class="reporte-fecha">
+                <div class="fecha-info">
+                  <div class="fecha-absoluta">{{ formatearFecha(reporte.fecha) }}</div>
+                  <div class="fecha-relativa">{{ getTiempoTranscurrido(reporte.fecha) }}</div>
+                </div>
+              </td>
+
+              <!-- Acciones -->
+              <td class="reporte-acciones">
+                <div class="acciones-container">
+                  
+                  <!-- Ver detalles -->
+                  <button class="action-btn view-btn" (click)="verDetallesReporte(reporte)" title="Ver detalles">
+                    <i class="bi bi-eye"></i>
+                  </button>
+
+                  <!-- Verificar -->
+                  <button 
+                    class="action-btn verify-btn" 
+                    (click)="verificarReporte(reporte)" 
+                    title="Verificar reporte"
+                    *ngIf="reporte.estadoActual === 'PENDIENTE' || reporte.estadoActual === 'EN_PROCESO'">
+                    <i class="bi bi-check-circle"></i>
+                  </button>
+
+                  <!-- En proceso -->
+                  <button 
+                    class="action-btn process-btn" 
+                    (click)="marcarEnProceso(reporte)" 
+                    title="Marcar como en proceso"
+                    *ngIf="reporte.estadoActual === 'PENDIENTE'">
+                    <i class="bi bi-gear"></i>
+                  </button>
+
+                  <!-- Rechazar -->
+                  <button 
+                    class="action-btn reject-btn" 
+                    (click)="rechazarReporte(reporte)" 
+                    title="Rechazar reporte"
+                    *ngIf="reporte.estadoActual === 'PENDIENTE' || reporte.estadoActual === 'EN_PROCESO'">
+                    <i class="bi bi-x-circle"></i>
+                  </button>
+
+                  <!-- Eliminar -->
+                  <button 
+                    class="action-btn delete-btn" 
+                    (click)="eliminarReporte(reporte)" 
+                    title="Eliminar reporte">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Paginación -->
+      <div class="pagination-container" *ngIf="totalPaginas > 1">
+        <div class="pagination-info">
+          Página {{ paginaActual }} de {{ totalPaginas }} 
+          ({{ reportesFiltrados.length }} resultados)
+        </div>
+        <div class="pagination-controls">
+          <button 
+            class="page-btn" 
+            (click)="cambiarPagina(paginaActual - 1)" 
+            [disabled]="paginaActual === 1">
+            <i class="bi bi-chevron-left"></i>
+          </button>
+          
+          <button 
+            *ngFor="let pagina of [].constructor(totalPaginas); let i = index"
+            class="page-btn"
+            [class.active]="i + 1 === paginaActual"
+            (click)="cambiarPagina(i + 1)">
+            {{ i + 1 }}
+          </button>
+          
+          <button 
+            class="page-btn" 
+            (click)="cambiarPagina(paginaActual + 1)" 
+            [disabled]="paginaActual === totalPaginas">
+            <i class="bi bi-chevron-right"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Modal de confirmación -->
+  <div class="modal-overlay" [class.show]="modalConfirmacion.mostrar" (click)="cerrarModal()">
+    <div class="modal-container" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3 class="modal-title">{{ modalConfirmacion.titulo }}</h3>
+        <button class="modal-close-btn" (click)="cerrarModal()">
+          <i class="bi bi-x"></i>
+        </button>
+      </div>
+      
+      <div class="modal-body">
+        <div class="modal-message" [innerHTML]="modalConfirmacion.mensaje"></div>
+        
+        <!-- Campo para motivo de rechazo -->
+        <div class="modal-input-group" *ngIf="modalConfirmacion.accion?.accion === 'rechazar'">
+          <label class="modal-label">Motivo del rechazo *</label>
+          <textarea 
+            class="modal-textarea" 
+            placeholder="Explica por qué se rechaza este reporte..."
+            [(ngModel)]="motivoRechazo"
+            rows="3"></textarea>
+        </div>
+        
+        <!-- Campo para comentario de eliminación -->
+        <div class="modal-input-group" *ngIf="modalConfirmacion.accion?.accion === 'eliminar'">
+          <label class="modal-label">Comentario (opcional)</label>
+          <textarea 
+            class="modal-textarea" 
+            placeholder="Motivo de la eliminación..."
+            [(ngModel)]="comentarioAdmin"
+            rows="2"></textarea>
+        </div>
+      </div>
+      
+      <div class="modal-footer">
+        <button class="modal-btn cancel-btn" (click)="cerrarModal()" [disabled]="procesandoAccion">
+          Cancelar
+        </button>
+        <button 
+          class="modal-btn confirm-btn" 
+          (click)="confirmarAccion()" 
+          [disabled]="procesandoAccion"
+          [class.loading]="procesandoAccion">
+          <span *ngIf="!procesandoAccion">Confirmar</span>
+          <span *ngIf="procesandoAccion">
+            <i class="bi bi-arrow-clockwise spinning"></i>
+            Procesando...
+          </span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

@@ -13,7 +13,6 @@ import { CambiarContraseniaComponent } from './paginas/cambiar-contrasenia/cambi
 // ===== DASHBOARDS Y VISTAS PRINCIPALES =====
 import { HomeComponent } from './paginas/home/home.component';
 import { PrincipalClienteComponent } from './paginas/principal-cliente/principal-cliente.component';
-// Cambia esta línea para usar tu componente admin actual
 import { PrincipalAdministradorComponent } from './paginas/principal-administrador/principal-administrador.component';
 
 // ===== GESTIÓN DE REPORTES =====
@@ -22,6 +21,10 @@ import { DetalleReporteComponent } from './paginas/detalle-reporte/detalle-repor
 import { MisReportesComponent } from './paginas/mis-reportes/mis-reportes.component';
 import { ReportesPropiosComponent } from './paginas/reportes-propios/reportes-propios.component';
 import { EditarReporteComponent } from './paginas/editar-reporte/editar-reporte.component';
+
+// ===== GESTIÓN ADMINISTRATIVA =====
+import { GestionReportesAdminComponent } from './paginas/gestion-reportes-admin/gestion-reportes-admin.component';
+import { GestionarInformesComponent } from './paginas/gestionar-informes/gestionar-informes.component';
 
 export const routes: Routes = [
   
@@ -46,60 +49,18 @@ export const routes: Routes = [
   { path: 'principal-cliente', component: PrincipalClienteComponent },
   { path: 'dashboard', component: PrincipalClienteComponent },
   { path: 'admin', component: PrincipalAdministradorComponent },
-  { path: 'principal-admin', component: PrincipalAdministradorComponent }, // Sin guard por ahora
+  { path: 'principal-admin', component: PrincipalAdministradorComponent },
   
-  // ===== GESTIÓN DE REPORTES =====
+  // ===== GESTIÓN DE REPORTES - CLIENTES =====
   { path: 'crear-reporte', component: CrearReporteComponent },
   { path: 'mis-reportes', component: MisReportesComponent },
   { path: 'detalle-reporte', component: DetalleReporteComponent },
   { path: 'editar-reporte', component: EditarReporteComponent },
   { path: 'reportes-propios', component: ReportesPropiosComponent },
   
-  // ===== DASHBOARDS - PROTEGIDOS POR ROL =====
-  { 
-    path: 'principal-cliente', 
-    component: PrincipalClienteComponent,
-    canActivate: ['AuthGuard'],
-    data: { role: 'CLIENTE' }
-  },
-  { 
-    path: 'dashboard', 
-    component: PrincipalClienteComponent,
-    canActivate: ['AuthGuard'],
-    data: { role: 'CLIENTE' }
-  },
-
-  // ===== GESTIÓN DE REPORTES - PROTEGIDAS =====
-  { 
-    path: 'crear-reporte', 
-    component: CrearReporteComponent,
-    canActivate: ['AuthGuard'],
-    data: { role: 'CLIENTE' }
-  },
-  { 
-    path: 'detalle-reporte', 
-    component: DetalleReporteComponent,
-    canActivate: ['AuthGuard'],
-    data: { role: 'CLIENTE' }
-  },
-  { 
-    path: 'mis-reportes', 
-    component: MisReportesComponent,
-    canActivate: ['AuthGuard'],
-    data: { role: 'CLIENTE' }
-  },
-  {
-    path: 'editar-reporte',
-    component: EditarReporteComponent,
-    canActivate: ['AuthGuard'],
-    data: { role: 'CLIENTE' }
-  },
-  { 
-    path: 'reportes-propios', 
-    component: ReportesPropiosComponent,
-    canActivate: ['AuthGuard'],
-    data: { role: 'CLIENTE' }
-  },
+  // ===== GESTIÓN ADMINISTRATIVA =====
+  { path: 'gestion-reportes-admin', component: GestionReportesAdminComponent },
+  { path: 'gestionar-informes', component: GestionarInformesComponent },
 
   // ===== RUTA WILDCARD (DEBE IR AL FINAL) =====
   { path: '**', redirectTo: '/home' }
