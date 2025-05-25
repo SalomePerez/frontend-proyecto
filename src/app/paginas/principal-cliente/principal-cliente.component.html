@@ -7,29 +7,33 @@
         <h1 class="app-name">SegurApp</h1>
       </div>
     </div>
-    
+
     <div class="navbar-right">
       <!-- Ícono de reportes PROPIOS - MODIFICADO -->
-      <button class="nav-icon-btn" [title]="'Mis Reportes Propios'" (click)="goToReportesPropios()">
+      <button class="nav-icon-btn" [title]="'Mis Reportes Propios'"
+        (click)="goToReportesPropios()">
         <i class="bi bi-file-earmark-text"></i>
         <span class="nav-label">Mis Reportes</span>
       </button>
-      
+
       <!-- Ícono de notificaciones -->
-      <button class="nav-icon-btn notification-btn" [title]="'Notificaciones'" (click)="toggleNotifications()">
+      <button class="nav-icon-btn notification-btn" [title]="'Notificaciones'"
+        (click)="toggleNotifications()">
         <i class="bi bi-bell"></i>
-        <span class="notification-badge" *ngIf="notificationCount > 0">{{ notificationCount }}</span>
+        <span class="notification-badge" *ngIf="notificationCount > 0">{{
+          notificationCount }}</span>
       </button>
-      
+
       <!-- Perfil de usuario -->
       <div class="user-profile" (click)="toggleUserMenu()">
         <div class="user-avatar">
           <i class="bi bi-person-circle"></i>
         </div>
         <span class="user-name">{{ userName }}</span>
-        <i class="bi bi-chevron-down dropdown-arrow" [class.rotated]="showUserMenu"></i>
+        <i class="bi bi-chevron-down dropdown-arrow"
+          [class.rotated]="showUserMenu"></i>
       </div>
-      
+
       <!-- Menú desplegable del usuario -->
       <div class="user-dropdown" [class.show]="showUserMenu">
         <div class="dropdown-item" (click)="goToProfile()">
@@ -54,7 +58,7 @@
     <!-- Panel lateral izquierdo -->
     <aside class="sidebar">
       <div class="sidebar-content">
-        
+
         <!-- Botón Reportes -->
         <button class="sidebar-btn reportes-btn" (click)="goToReportes()">
           <div class="btn-content">
@@ -86,56 +90,55 @@
       <div class="map-header">
         <h2 class="map-title">Mapa de Reportes - {{ userCity }}</h2>
         <div class="map-controls">
-          <button 
-            class="control-btn" 
-            (click)="centerMap()" 
-            [title]="'Centrar en mi ubicación'" 
+          <button
+            class="control-btn"
+            (click)="centerMap()"
+            [title]="'Centrar en mi ubicación'"
             [disabled]="!mapaService.estaInicializado()">
             <i class="bi bi-geo-alt"></i>
           </button>
-          <button 
-            class="control-btn" 
-            (click)="toggleMapType()" 
-            [title]="'Cambiar estilo del mapa'" 
+          <button
+            class="control-btn"
+            (click)="toggleMapType()"
+            [title]="'Cambiar estilo del mapa'"
             [disabled]="!mapaService.estaInicializado()">
             <i class="bi bi-layers"></i>
           </button>
-          <button 
-            class="control-btn" 
-            (click)="refreshReports()" 
-            [title]="'Actualizar reportes'" 
+          <button
+            class="control-btn"
+            (click)="refreshReports()"
+            [title]="'Actualizar reportes'"
             [disabled]="isLoadingMap || !mapaService.estaInicializado()">
-            <i class="bi bi-arrow-clockwise" [class.spinning]="isLoadingMap"></i>
+            <i class="bi bi-arrow-clockwise"
+              [class.spinning]="isLoadingMap"></i>
           </button>
           <!-- Botón de debug (remover en producción) -->
-          <button 
-            class="control-btn debug-btn" 
-            (click)="debugMapInfo()" 
-            [title]="'Debug Map Info'"
-            style="background: #ef4444; color: white;">
-            <i class="bi bi-bug"></i>
-          </button>
+
         </div>
       </div>
-      
+
       <!-- Mapa de Mapbox -->
       <div class="map-wrapper">
         <!-- Contenedor del mapa Mapbox -->
-        <div 
-          id="mapbox-map" 
-          class="mapbox-map" 
+        <div
+          id="mapbox-map"
+          class="mapbox-map"
           [style.display]="mapError ? 'none' : 'block'"
           [style.width]="'100%'"
           [style.height]="'100%'"
           [style.min-height]="'400px'">
         </div>
-        
+
         <!-- Overlay de carga del mapa -->
-        <div class="map-loading" *ngIf="isLoadingMap && !mapError">
+        <div class="map-loading"
+          *ngIf="(isLoadingMap || isLoadingReportes) && !mapError">
           <div class="loading-content">
             <div class="spinner"></div>
-            <p>Cargando mapa...</p>
-            <small>Conectando con Mapbox...</small>
+            <p *ngIf="isLoadingMap">Cargando mapa...</p>
+            <p *ngIf="isLoadingReportes">Cargando reportes...</p>
+            <small *ngIf="isLoadingMap">Conectando con Mapbox...</small>
+            <small *ngIf="isLoadingReportes && ciudadDetectada">Obteniendo
+              reportes de {{ ciudadDetectada }}...</small>
           </div>
         </div>
 
@@ -146,7 +149,8 @@
             <h3>Error cargando el mapa</h3>
             <p>{{ mapError }}</p>
             <div class="error-actions">
-              <button class="btn primary-btn" (click)="retryMapInitialization()">
+              <button class="btn primary-btn"
+                (click)="retryMapInitialization()">
                 <i class="bi bi-arrow-clockwise"></i>
                 Reintentar
               </button>
@@ -157,21 +161,52 @@
             </div>
           </div>
         </div>
-        
+
         <!-- Mensaje si no hay ubicación -->
-        <div class="no-location-message" *ngIf="!userLocation && !isLoadingMap && !mapError">
+        <div class="no-location-message"
+          *ngIf="!userLocation && !isLoadingMap && !mapError">
           <div class="message-content">
             <i class="bi bi-geo-alt-fill"></i>
             <h3>Ubicación no disponible</h3>
-            <p>Permite el acceso a tu ubicación para ver el mapa personalizado</p>
+            <p>Permite el acceso a tu ubicación para ver el mapa
+              personalizado</p>
             <button class="btn primary-btn" (click)="requestLocation()">
               <i class="bi bi-geo-alt"></i>
               Permitir Ubicación
             </button>
           </div>
         </div>
+
+        <!-- ✨ NUEVA SECCIÓN: Información compacta en esquina inferior derecha -->
+        <div class="map-info-bottom-right" *ngIf="!mapError">
+          <div class="info-item-compact"
+            [title]="reportes.length + ' reportes encontrados'">
+            <i class="bi bi-pin-map"></i>
+            <span>{{ reportes.length }}</span>
+            <span *ngIf="isLoadingReportes" class="loading-indicator">
+              <div class="spinner-tiny"></div>
+            </span>
+          </div>
+          <div class="info-item-compact" [title]="'Ubicación: ' + userCity">
+            <i class="bi bi-geo-alt"></i>
+            <span>{{ userCity.split(',')[0] }}</span>
+            <!-- Solo mostrar el nombre de la ciudad -->
+          </div>
+          <div class="info-item-compact" *ngIf="mapaService.estaInicializado()"
+            title="Mapa conectado y funcionando">
+            <i class="bi bi-check-circle text-success"></i>
+            <span>Activo</span>
+          </div>
+          <!-- Mostrar precisión de GPS si está disponible -->
+          <div class="info-item-compact"
+            *ngIf="ubicacionReal && ubicacionReal.precision"
+            [title]="'Precisión GPS: ±' + ubicacionReal.precision + ' metros'">
+            <i class="bi bi-crosshair2"></i>
+            <span>±{{ ubicacionReal.precision }}m</span>
+          </div>
+        </div>
       </div>
-      
+
       <!-- Leyenda del mapa -->
       <div class="map-legend" *ngIf="!mapError">
         <h4>Estados de Reportes</h4>
@@ -193,39 +228,49 @@
             <span>Rechazado</span>
           </div>
         </div>
-        
+
         <!-- Botones de filtro -->
         <div class="legend-filters">
-          <button 
-            class="filter-btn active" 
-            (click)="mostrarTodosLosReportes()" 
+          <button
+            class="filter-btn active"
+            (click)="mostrarTodosLosReportes()"
             [disabled]="!mapaService.estaInicializado()">
             <i class="bi bi-eye"></i> Todos
           </button>
-          <button 
-            class="filter-btn" 
-            (click)="filtrarReportesPorEstado('PENDIENTE')" 
+          <button
+            class="filter-btn"
+            (click)="filtrarReportesPorEstado('PENDIENTE')"
             [disabled]="!mapaService.estaInicializado()">
             <i class="bi bi-clock"></i> Pendientes
           </button>
         </div>
       </div>
-      
+
       <!-- Información de reportes -->
-      <div class="map-info" *ngIf="!mapError">
-        <div class="info-item">
+      <div class="map-info-bottom-right" *ngIf="!mapError">
+        <div class="info-item-compact">
           <i class="bi bi-pin-map"></i>
-          <span>{{ reportes.length }} reportes</span>
+          <span>{{ reportes.length }}</span>
+          <span *ngIf="isLoadingReportes" class="loading-indicator">
+            <div class="spinner-tiny"></div>
+          </span>
         </div>
-        <div class="info-item">
+        <div class="info-item-compact">
           <i class="bi bi-geo-alt"></i>
           <span>{{ userCity }}</span>
         </div>
-        <div class="info-item" *ngIf="mapaService.estaInicializado()">
+        <div class="info-item-compact" *ngIf="mapaService.estaInicializado()">
           <i class="bi bi-check-circle text-success"></i>
-          <span>Mapa activo</span>
+          <span>Activo</span>
+        </div>
+        <!-- Mostrar estado de ubicación -->
+        <div class="info-item-compact"
+          *ngIf="ubicacionReal && ubicacionReal.precision">
+          <i class="bi bi-crosshair2"></i>
+          <span>±{{ ubicacionReal.precision }}m</span>
         </div>
       </div>
+
     </section>
   </main>
 
@@ -248,7 +293,7 @@
           <span class="notification-time">{{ notification.time }}</span>
         </div>
       </div>
-      
+
       <div class="no-notifications" *ngIf="notifications.length === 0">
         <i class="bi bi-bell-slash"></i>
         <p>No tienes notificaciones nuevas</p>
@@ -257,7 +302,7 @@
   </div>
 
   <!-- Overlay para cerrar menús -->
-  <div class="overlay" 
-       [class.show]="showUserMenu || showNotifications" 
-       (click)="closeAllMenus()"></div>
+  <div class="overlay"
+    [class.show]="showUserMenu || showNotifications"
+    (click)="closeAllMenus()"></div>
 </div>

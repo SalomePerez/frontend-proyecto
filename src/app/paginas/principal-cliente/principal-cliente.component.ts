@@ -4,8 +4,10 @@ import { Router } from '@angular/router';
 import { Subject, takeUntil } from 'rxjs';
 import { MapaService, ReporteDTO, Coordenadas } from '../../servicios/mapa.service';
 import { AuthService } from '../../servicios/auth.service';
+import { ReporteService, UbicacionUsuario } from '../../servicios/reporte.service';
+import { WebSocketNotificationService, NotificacionWebSocket } from '../../servicios/websocket-notification.service'; // ← Nuevo servicio
 
-// Interfaces
+// Interfaces - ACTUALIZADO para notificaciones reales
 interface Notification {
   id: number;
   type: 'info' | 'success' | 'warning' | 'error';
@@ -25,6 +27,7 @@ interface UserLocation {
   selector: 'app-principal-cliente',
   standalone: true,
   imports: [CommonModule],
+  providers: [WebSocketNotificationService],
   templateUrl: './principal-cliente.component.html',
   styleUrls: ['./principal-cliente.component.css']
 })
@@ -32,21 +35,28 @@ export class PrincipalClienteComponent implements OnInit, OnDestroy, AfterViewIn
   
   // Datos del usuario
   userName: string = 'Cliente SegurApp';
-  userCity: string = 'Pereira, Colombia';
+  userCity: string = 'Obteniendo ubicación...';
   userLocation: UserLocation | null = null;
   
   // Estados de la UI
   showUserMenu: boolean = false;
   showNotifications: boolean = false;
   isLoadingMap: boolean = true;
+  isLoadingReportes: boolean = false; // ← Nuevo estado
   mapError: string = '';
   
-  // Notificaciones
+  // Notificaciones - ACTUALIZADO para usar WebSocket
   notifications: Notification[] = [];
   notificationCount: number = 0;
+  notificacionesReales: NotificacionWebSocket[] = []; // ← Nueva lista para notificaciones reales
   
   // Reportes para el mapa
   reportes: ReporteDTO[] = [];
+  
+  // ✨ NUEVAS PROPIEDADES PARA UBICACIÓN REAL
+  ubicacionReal: UbicacionUsuario | null = null;
+  ciudadDetectada: string = '';
+  errorUbicacion: string = '';
   
   // Estilos de mapa disponibles
   estilosMapas = [
@@ -63,8 +73,10 @@ export class PrincipalClienteComponent implements OnInit, OnDestroy, AfterViewIn
 
   constructor(
     private router: Router,
-    public mapaService: MapaService, // Hacer público para acceso desde template
+    public mapaService: MapaService,
     private authService: AuthService,
+    private reporteService: ReporteService,
+    private webSocketService: WebSocketNotificationService, // ← Inyectar servicio WebSocket
     private ngZone: NgZone,
     private cdr: ChangeDetectorRef
   ) {
@@ -76,8 +88,10 @@ export class PrincipalClienteComponent implements OnInit, OnDestroy, AfterViewIn
     console.log('🚀 ngOnInit - Cargando datos iniciales...');
     this.loadUserData();
     this.loadNotifications();
-    this.loadReportesMockData();
-    this.detectUserLocation();
+    this.initializeWebSocketNotifications(); // ← Inicializar WebSocket
+    
+    // ✨ CAMBIO: Primero obtener ubicación real, luego cargar reportes
+    this.detectarUbicacionReal();
   }
 
   ngAfterViewInit(): void {
@@ -85,7 +99,6 @@ export class PrincipalClienteComponent implements OnInit, OnDestroy, AfterViewIn
     
     // Usar NgZone para optimizar la detección de cambios
     this.ngZone.runOutsideAngular(() => {
-      // Múltiples timeouts para asegurar que el DOM esté listo
       setTimeout(() => {
         this.ngZone.run(() => {
           this.initializeMapbox();
@@ -98,9 +111,267 @@ export class PrincipalClienteComponent implements OnInit, OnDestroy, AfterViewIn
     console.log('💀 ngOnDestroy - Limpiando recursos...');
     
     this.mapaService.destruirMapa();
+    this.webSocketService.desconectar(); // ← Desconectar WebSocket
     this.destroy$.next();
     this.destroy$.complete();
     this.mapaInicializado = false;
+  }
+
+  // ✨ NUEVO MÉTODO: Detectar ubicación real del usuario
+  private detectarUbicacionReal(): void {
+    console.log('📍 Detectando ubicación real del usuario...');
+    this.userCity = 'Obteniendo ubicación...';
+    this.cdr.detectChanges();
+
+    this.reporteService.obtenerUbicacionCompleta()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (ubicacion) => {
+          console.log('✅ Ubicación real detectada:', ubicacion);
+          
+          this.ubicacionReal = ubicacion;
+          this.ciudadDetectada = ubicacion.ciudad;
+          this.userCity = `${ubicacion.ciudad}, Colombia`;
+          
+          // Actualizar userLocation para el mapa
+          this.userLocation = {
+            lat: ubicacion.latitud,
+            lng: ubicacion.longitud,
+            city: ubicacion.ciudad
+          };
+          
+          // Centrar mapa si ya está inicializado
+          if (this.mapaService.estaInicializado()) {
+            this.mapaService.centrarMapa([ubicacion.longitud, ubicacion.latitud], 14);
+          }
+          
+          // Cargar reportes de la ciudad detectada
+          this.cargarReportesReales();
+          
+          this.cdr.detectChanges();
+        },
+        error: (error) => {
+          console.error('❌ Error detectando ubicación:', error);
+          this.errorUbicacion = 'No se pudo obtener la ubicación';
+          this.userCity = 'Armenia, Colombia'; // ← CAMBIO: Armenia por defecto
+          
+          // Usar ubicación por defecto (Armenia)
+          this.ubicacionReal = {
+            latitud: 4.5339,  // ← Coordenadas de Armenia
+            longitud: -75.6811,
+            ciudad: 'ARMENIA',
+            precision: 0
+          };
+          
+          this.userLocation = {
+            lat: 4.5339,   // ← Coordenadas de Armenia
+            lng: -75.6811,
+            city: 'ARMENIA'
+          };
+          
+          // Cargar reportes de Armenia por defecto
+          this.cargarReportesReales();
+          this.cdr.detectChanges();
+        }
+      });
+  }
+
+  // ✨ NUEVO MÉTODO: Inicializar notificaciones WebSocket
+  private initializeWebSocketNotifications(): void {
+    console.log('🔔 Inicializando notificaciones WebSocket...');
+    
+    // Obtener ID del usuario autenticado para las notificaciones
+    let idUsuario: string | undefined;
+    try {
+      const usuario = this.authService.getCurrentUser();
+      idUsuario = usuario?.id;
+    } catch (error) {
+      console.warn('No se pudo obtener ID del usuario para notificaciones');
+    }
+    
+    // Conectar al WebSocket
+    this.webSocketService.conectar(idUsuario);
+    
+    // Suscribirse a nuevas notificaciones
+    this.webSocketService.notificaciones$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (notificacion) => {
+          console.log('🔔 Nueva notificación recibida:', notificacion);
+          this.procesarNuevaNotificacion(notificacion);
+        },
+        error: (error) => {
+          console.error('❌ Error en notificaciones WebSocket:', error);
+        }
+      });
+    
+    // Actualizar contador de notificaciones periódicamente
+    this.actualizarContadorNotificaciones();
+  }
+
+  // ✨ NUEVO MÉTODO: Procesar nueva notificación
+  private procesarNuevaNotificacion(notificacion: NotificacionWebSocket): void {
+    // Agregar a la lista de notificaciones reales
+    this.notificacionesReales = this.webSocketService.obtenerNotificaciones();
+    
+    // Convertir a formato del componente para compatibilidad
+    const notificacionConvertida: Notification = {
+      id: parseInt(notificacion.id || Date.now().toString()),
+      type: this.convertirTipoNotificacion(notificacion.tipo),
+      title: notificacion.titulo,
+      message: notificacion.mensaje,
+      time: this.formatearTiempo(notificacion.fecha),
+      read: notificacion.leida
+    };
+    
+    // Agregar al inicio de la lista
+    this.notifications.unshift(notificacionConvertida);
+    
+    // Mantener solo las últimas 20 notificaciones en la UI
+    if (this.notifications.length > 20) {
+      this.notifications = this.notifications.slice(0, 20);
+    }
+    
+    // Actualizar contador
+    this.actualizarContadorNotificaciones();
+    
+    // Trigger change detection
+    this.cdr.detectChanges();
+    
+    // Opcional: Mostrar notificación del navegador
+    if ('Notification' in window && Notification.permission === 'granted') {
+      new Notification(notificacion.titulo, {
+        body: notificacion.mensaje,
+        icon: '/assets/logo.png'
+      });
+    }
+  }
+
+  // ✨ NUEVO MÉTODO: Convertir tipo de notificación
+  private convertirTipoNotificacion(tipo: string): 'info' | 'success' | 'warning' | 'error' {
+    switch (tipo.toUpperCase()) {
+      case 'SUCCESS': return 'success';
+      case 'WARNING': return 'warning';
+      case 'ERROR': return 'error';
+      case 'INFO':
+      case 'SYSTEM':
+      default: return 'info';
+    }
+  }
+
+  // ✨ NUEVO MÉTODO: Formatear tiempo relativo
+  private formatearTiempo(fecha?: string): string {
+    if (!fecha) return 'Ahora';
+    
+    const ahora = new Date();
+    const fechaNotificacion = new Date(fecha);
+    const diferencia = ahora.getTime() - fechaNotificacion.getTime();
+    
+    const minutos = Math.floor(diferencia / (1000 * 60));
+    const horas = Math.floor(diferencia / (1000 * 60 * 60));
+    const dias = Math.floor(diferencia / (1000 * 60 * 60 * 24));
+    
+    if (minutos < 1) return 'Ahora';
+    if (minutos < 60) return `Hace ${minutos} minuto${minutos > 1 ? 's' : ''}`;
+    if (horas < 24) return `Hace ${horas} hora${horas > 1 ? 's' : ''}`;
+    return `Hace ${dias} día${dias > 1 ? 's' : ''}`;
+  }
+
+  // ✨ ACTUALIZADO: Método para actualizar contador
+  private actualizarContadorNotificaciones(): void {
+    this.notificationCount = this.webSocketService.obtenerCantidadNoLeidas();
+  }
+  private verificarAutenticacion(): boolean {
+    const token = localStorage.getItem('authToken') || 
+                 localStorage.getItem('token') || 
+                 localStorage.getItem('jwt_token') ||
+                 sessionStorage.getItem('authToken') || 
+                 sessionStorage.getItem('token') ||
+                 sessionStorage.getItem('jwt_token');
+    
+    const estaAutenticado = !!token;
+    console.log('🔐 Estado de autenticación:', estaAutenticado ? 'Autenticado' : 'No autenticado');
+    
+    if (!estaAutenticado) {
+      console.warn('⚠️ Usuario no autenticado - los reportes no se cargarán');
+      this.errorUbicacion = 'Debes iniciar sesión para ver los reportes de tu ciudad';
+    }
+    
+    return estaAutenticado;
+  }
+
+  // ✨ ACTUALIZAR: Método para cargar reportes con verificación de auth
+  private cargarReportesReales(): void {
+    if (!this.ubicacionReal) {
+      console.warn('⚠️ No hay ubicación para cargar reportes');
+      return;
+    }
+
+    // ✨ VERIFICAR AUTENTICACIÓN ANTES DE CARGAR REPORTES
+    if (!this.verificarAutenticacion()) {
+      console.log('⚠️ Usuario no autenticado, usando datos mock');
+      this.loadReportesMockData();
+      return;
+    }
+
+    console.log('📊 Cargando reportes reales para:', this.ubicacionReal.ciudad);
+    this.isLoadingReportes = true;
+    this.cdr.detectChanges();
+
+    this.reporteService.obtenerReportesPorCiudad(this.ubicacionReal.ciudad)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (reportes) => {
+          console.log(`✅ Reportes reales cargados:`, reportes.length);
+          
+          // Convertir reportes del backend al formato que espera el mapa
+          this.reportes = reportes.map(reporte => ({
+            id: reporte.id,
+            titulo: reporte.titulo,
+            descripcion: reporte.descripcion,
+            fecha: reporte.fecha,
+            contadorImportante: reporte.contadorImportante,
+            idUsuario: reporte.idUsuario,
+            ubicacion: {
+              latitud: reporte.ubicacion.latitud,
+              longitud: reporte.ubicacion.longitud
+            },
+            fotos: reporte.fotos,
+            estadoActual: reporte.estadoActual,
+            ciudad: reporte.ciudad,
+            comentarios: reporte.comentarios,
+            esAnonimo: reporte.esAnonimo,
+            nombreUsuario: reporte.nombreUsuario
+          }));
+          
+          console.log(`🎯 Reportes convertidos para el mapa:`, this.reportes.length);
+          
+          // Si el mapa ya está listo, cargar los marcadores
+          if (this.mapaService.estaInicializado()) {
+            this.cargarReportesEnMapa();
+          }
+          
+          this.isLoadingReportes = false;
+          this.cdr.detectChanges();
+        },
+        error: (error) => {
+          console.error('❌ Error cargando reportes reales:', error);
+          this.isLoadingReportes = false;
+          
+          // ✨ MANEJAR ERRORES DE AUTENTICACIÓN
+          if (error.message && error.message.includes('sesión')) {
+            this.errorUbicacion = 'Sesión expirada. Inicia sesión para ver reportes.';
+            // Opcional: redirigir al login
+            // this.router.navigate(['/login']);
+            return;
+          }
+          
+          // En caso de otros errores, usar datos mock como fallback
+          console.log('🔄 Usando datos mock como fallback...');
+          this.loadReportesMockData();
+          this.cdr.detectChanges();
+        }
+      });
   }
 
   /**
@@ -157,6 +428,12 @@ export class PrincipalClienteComponent implements OnInit, OnDestroy, AfterViewIn
       
       console.log('✅ Mapa Mapbox inicializado correctamente');
       this.mapaInicializado = true;
+      
+      // ✨ CAMBIO: Centrar en ubicación real si está disponible
+      if (this.ubicacionReal) {
+        console.log('🎯 Centrando mapa en ubicación real del usuario...');
+        this.mapaService.centrarMapa([this.ubicacionReal.longitud, this.ubicacionReal.latitud], 14);
+      }
       
       // Cargar reportes en el mapa después de un momento
       setTimeout(async () => {
@@ -244,6 +521,11 @@ export class PrincipalClienteComponent implements OnInit, OnDestroy, AfterViewIn
         }, 2000);
       } else {
         console.log('⚠️ No hay reportes para mostrar en el mapa');
+        
+        // Si no hay reportes, mostrar mensaje informativo
+        if (this.ciudadDetectada) {
+          console.log(`ℹ️ No se encontraron reportes en ${this.ciudadDetectada}`);
+        }
       }
     } catch (error) {
       console.error('❌ Error cargando reportes en el mapa:', error);
@@ -251,9 +533,11 @@ export class PrincipalClienteComponent implements OnInit, OnDestroy, AfterViewIn
   }
 
   /**
-   * Cargar datos de ejemplo de reportes con coordenadas válidas
+   * ✨ ACTUALIZADO: Cargar datos de ejemplo solo como fallback
    */
   private loadReportesMockData(): void {
+    console.log('📊 Cargando datos mock como fallback...');
+    
     this.reportes = [
       {
         id: '1',
@@ -263,12 +547,12 @@ export class PrincipalClienteComponent implements OnInit, OnDestroy, AfterViewIn
         contadorImportante: 3,
         idUsuario: 'user1',
         ubicacion: {
-          latitud: 4.8143,
-          longitud: -75.6946
+          latitud: this.ubicacionReal?.latitud || 4.5339, // ← Armenia
+          longitud: this.ubicacionReal?.longitud || -75.6811
         },
         fotos: [],
         estadoActual: 'PENDIENTE',
-        ciudad: 'PEREIRA',
+        ciudad: this.ciudadDetectada || 'ARMENIA', // ← Armenia por defecto
         comentarios: [],
         esAnonimo: false,
         nombreUsuario: 'Juan Pérez'
@@ -281,72 +565,24 @@ export class PrincipalClienteComponent implements OnInit, OnDestroy, AfterViewIn
         contadorImportante: 8,
         idUsuario: 'user2',
         ubicacion: {
-          latitud: 4.8093,
-          longitud: -75.6906
+          latitud: (this.ubicacionReal?.latitud || 4.5339) + 0.005, // ← Armenia
+          longitud: (this.ubicacionReal?.longitud || -75.6811) + 0.004
         },
         fotos: [],
         estadoActual: 'EN_PROCESO',
-        ciudad: 'PEREIRA',
+        ciudad: this.ciudadDetectada || 'ARMENIA', // ← Armenia por defecto
         comentarios: [],
         esAnonimo: false,
         nombreUsuario: 'María García'
-      },
-      {
-        id: '3',
-        titulo: 'Hueco profundo en Carrera 15',
-        descripcion: 'Hueco profundo en la carrera 15 con calle 18 que puede causar accidentes a los vehículos, especialmente motocicletas.',
-        fecha: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-        contadorImportante: 1,
-        idUsuario: 'user3',
-        ubicacion: {
-          latitud: 4.8113,
-          longitud: -75.6976
-        },
-        fotos: [],
-        estadoActual: 'RESUELTO',
-        ciudad: 'PEREIRA',
-        comentarios: [],
-        esAnonimo: true
-      },
-      {
-        id: '4',
-        titulo: 'Ruido excesivo - Construcción',
-        descripcion: 'Construcción con ruido excesivo en horarios no permitidos (después de las 6 PM), afecta el descanso de los vecinos del sector.',
-        fecha: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
-        contadorImportante: 5,
-        idUsuario: 'user4',
-        ubicacion: {
-          latitud: 4.8163,
-          longitud: -75.6856
-        },
-        fotos: [],
-        estadoActual: 'RECHAZADO',
-        ciudad: 'PEREIRA',
-        comentarios: [],
-        esAnonimo: false,
-        nombreUsuario: 'Carlos López'
-      },
-      {
-        id: '5',
-        titulo: 'Alumbrado público deficiente',
-        descripcion: 'Varias luminarias del sector están fundidas, generando inseguridad durante las horas nocturnas.',
-        fecha: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
-        contadorImportante: 2,
-        idUsuario: 'user5',
-        ubicacion: {
-          latitud: 4.8053,
-          longitud: -75.6926
-        },
-        fotos: [],
-        estadoActual: 'PENDIENTE',
-        ciudad: 'PEREIRA',
-        comentarios: [],
-        esAnonimo: false,
-        nombreUsuario: 'Ana Rodríguez'
       }
     ];
     
-    console.log(`📊 Cargados ${this.reportes.length} reportes de ejemplo con coordenadas válidas`);
+    console.log(`📊 Cargados ${this.reportes.length} reportes mock`);
+    
+    // Cargar en el mapa si está disponible
+    if (this.mapaService.estaInicializado()) {
+      this.cargarReportesEnMapa();
+    }
   }
 
   private initializeData(): void {
@@ -371,7 +607,7 @@ export class PrincipalClienteComponent implements OnInit, OnDestroy, AfterViewIn
         id: 3,
         type: 'warning',
         title: 'Alerta de zona',
-        message: 'Aumento de reportes en el sector La María. Mantente alerta.',
+        message: 'Aumento de reportes en el sector. Mantente alerta.',
         time: 'Hace 3 horas',
         read: true
       }
@@ -385,55 +621,44 @@ export class PrincipalClienteComponent implements OnInit, OnDestroy, AfterViewIn
       const usuario = this.authService.getCurrentUser();
       if (usuario) {
         this.userName = usuario.nombre || 'Cliente SegurApp';
+        console.log('👤 Usuario cargado:', this.userName);
       }
     } catch (error) {
       console.warn('Error cargando datos del usuario:', error);
+      // Intentar obtener el nombre del token o localStorage
+      this.tryGetUserNameFromStorage();
     }
-    
-    this.userLocation = {
-      lat: 4.8143,
-      lng: -75.6946,
-      city: 'Pereira, Colombia'
-    };
-    this.userCity = 'Pereira, Colombia';
+  }
+
+  // ✨ NUEVO MÉTODO: Intentar obtener nombre del usuario desde storage
+  private tryGetUserNameFromStorage(): void {
+    try {
+      // Intentar obtener datos del usuario desde localStorage
+      const userData = localStorage.getItem('userData') || 
+                      localStorage.getItem('currentUser') ||
+                      sessionStorage.getItem('userData') ||
+                      sessionStorage.getItem('currentUser');
+      
+      if (userData) {
+        const user = JSON.parse(userData);
+        if (user.nombre) {
+          this.userName = user.nombre;
+          console.log('👤 Nombre de usuario obtenido desde storage:', this.userName);
+        }
+      }
+    } catch (error) {
+      console.warn('No se pudo obtener el nombre del usuario desde storage');
+    }
   }
 
   private loadNotifications(): void {
     console.log('📬 Notificaciones cargadas:', this.notifications.length);
   }
 
-  private detectUserLocation(): void {
-    if (!navigator.geolocation) {
-      console.warn('⚠️ Geolocalización no soportada por este navegador');
-      return;
-    }
-
-    console.log('📍 Solicitando ubicación del usuario...');
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        this.userLocation = {
-          lat: position.coords.latitude,
-          lng: position.coords.longitude,
-          city: 'Ubicación actual'
-        };
-        console.log('✅ Ubicación del usuario detectada:', this.userLocation);
-        
-        // Centrar mapa en la nueva ubicación si ya está inicializado
-        if (this.mapaService.estaInicializado()) {
-          this.mapaService.centrarMapa([this.userLocation.lng, this.userLocation.lat], 15);
-        }
-      },
-      (error) => {
-        console.warn('⚠️ Error obteniendo ubicación:', error.message);
-        // Mantener ubicación por defecto
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 15000,
-        maximumAge: 300000
-      }
-    );
+  // ✨ ACTUALIZADO: Método para solicitar ubicación manualmente
+  requestLocation(): void {
+    console.log('📍 Solicitando permisos de ubicación manualmente...');
+    this.detectarUbicacionReal();
   }
 
   // === MÉTODOS DE NAVEGACIÓN ===
@@ -452,7 +677,6 @@ export class PrincipalClienteComponent implements OnInit, OnDestroy, AfterViewIn
     this.router.navigate(['/mis-reportes']);
   }
 
-  // ✅ MÉTODO CLAVE: Navegación a reportes propios
   goToReportesPropios(): void {
     this.router.navigate(['/reportes-propios']);
   }
@@ -495,11 +719,16 @@ export class PrincipalClienteComponent implements OnInit, OnDestroy, AfterViewIn
   }
 
   private markNotificationsAsRead(): void {
+    // Marcar notificaciones tradicionales como leídas
     this.notifications.forEach(notification => {
       if (!notification.read) {
         notification.read = true;
       }
     });
+    
+    // Marcar notificaciones WebSocket como leídas
+    this.webSocketService.marcarTodasComoLeidas();
+    
     this.notificationCount = 0;
   }
 
@@ -512,12 +741,15 @@ export class PrincipalClienteComponent implements OnInit, OnDestroy, AfterViewIn
       return;
     }
     
-    if (this.userLocation) {
+    // ✨ CAMBIO: Usar ubicación real si está disponible
+    if (this.ubicacionReal) {
+      this.mapaService.centrarMapa([this.ubicacionReal.longitud, this.ubicacionReal.latitud], 16);
+    } else if (this.userLocation) {
       this.mapaService.centrarMapa([this.userLocation.lng, this.userLocation.lat], 16);
     } else {
       console.warn('⚠️ No se puede centrar el mapa: ubicación no disponible');
-      // Usar ubicación por defecto
-      this.mapaService.centrarMapa([-75.6946, 4.8143], 14);
+      // Usar ubicación por defecto (Armenia)
+      this.mapaService.centrarMapa([-75.6811, 4.5339], 14); // ← Armenia
     }
   }
 
@@ -536,8 +768,9 @@ export class PrincipalClienteComponent implements OnInit, OnDestroy, AfterViewIn
     console.log(`✅ Mapa cambiado a estilo: ${nuevoEstilo.nombre}`);
   }
 
+  // ✨ ACTUALIZADO: Método para refrescar reportes desde el backend
   async refreshReports(): Promise<void> {
-    console.log('🔄 Actualizando reportes en el mapa...');
+    console.log('🔄 Actualizando reportes desde el backend...');
     
     if (!this.mapaService.estaInicializado()) {
       console.warn('⚠️ Mapa no inicializado para actualizar reportes');
@@ -551,12 +784,53 @@ export class PrincipalClienteComponent implements OnInit, OnDestroy, AfterViewIn
       // Limpiar marcadores existentes
       this.mapaService.limpiarMarcadores();
       
-      // Simular carga de nuevos datos
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // En producción, hacer petición al backend para obtener reportes actualizados
-      this.loadReportesMockData();
-      await this.cargarReportesEnMapa();
+      // Recargar reportes reales desde el backend
+      if (this.ubicacionReal) {
+        await new Promise(resolve => {
+          this.reporteService.obtenerReportesPorCiudad(this.ubicacionReal!.ciudad)
+            .pipe(takeUntil(this.destroy$))
+            .subscribe({
+              next: (reportes) => {
+                console.log('✅ Reportes actualizados desde backend:', reportes.length);
+                
+                // Convertir reportes
+                this.reportes = reportes.map(reporte => ({
+                  id: reporte.id,
+                  titulo: reporte.titulo,
+                  descripcion: reporte.descripcion,
+                  fecha: reporte.fecha,
+                  contadorImportante: reporte.contadorImportante,
+                  idUsuario: reporte.idUsuario,
+                  ubicacion: {
+                    latitud: reporte.ubicacion.latitud,
+                    longitud: reporte.ubicacion.longitud
+                  },
+                  fotos: reporte.fotos,
+                  estadoActual: reporte.estadoActual,
+                  ciudad: reporte.ciudad,
+                  comentarios: reporte.comentarios,
+                  esAnonimo: reporte.esAnonimo,
+                  nombreUsuario: reporte.nombreUsuario
+                }));
+                
+                // Cargar en el mapa
+                this.cargarReportesEnMapa();
+                resolve(true);
+              },
+              error: (error) => {
+                console.error('❌ Error actualizando reportes:', error);
+                
+                // ✨ MANEJAR ERRORES DE AUTENTICACIÓN
+                if (error.message && error.message.includes('sesión')) {
+                  console.warn('⚠️ Sesión expirada, no se pueden cargar reportes');
+                  // Opcional: mostrar mensaje al usuario o redirigir
+                }
+                
+                resolve(false);
+              }
+            });
+        });
+      }
       
       console.log('✅ Reportes actualizados exitosamente');
     } catch (error) {
@@ -565,11 +839,6 @@ export class PrincipalClienteComponent implements OnInit, OnDestroy, AfterViewIn
       this.isLoadingMap = false;
       this.cdr.detectChanges();
     }
-  }
-
-  requestLocation(): void {
-    console.log('📍 Solicitando permisos de ubicación...');
-    this.detectUserLocation();
   }
 
   /**
@@ -648,13 +917,19 @@ export class PrincipalClienteComponent implements OnInit, OnDestroy, AfterViewIn
    * Método para debugging - obtener información del mapa
    */
   debugMapInfo(): void {
-    const info = this.mapaService.obtenerInfoMapa();
-    console.log('🐛 Información del mapa:', info);
+    const infoMapa = this.mapaService.obtenerInfoMapa();
+    console.log('🐛 Información del mapa:', infoMapa);
     console.log('🐛 Estado del componente:', {
       isLoadingMap: this.isLoadingMap,
+      isLoadingReportes: this.isLoadingReportes,
       mapError: this.mapError,
       mapaInicializado: this.mapaInicializado,
-      reportes: this.reportes.length
+      reportes: this.reportes.length,
+      ubicacionReal: this.ubicacionReal,
+      ciudadDetectada: this.ciudadDetectada
     });
+    
+    // Debug del servicio de reportes también
+    this.reporteService.debugToken();
   }
 }

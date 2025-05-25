@@ -1,8 +1,9 @@
-// src/app/servicios/reporte.service.ts
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { Observable, throwError } from 'rxjs';
-import { catchError, map } from 'rxjs/operators';
+import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
+import { Observable, throwError, of } from 'rxjs';
+import { catchError, map, switchMap } from 'rxjs/operators';
+import { environment } from '../../environments/environment';
+import { normalizarNombreCiudad } from '../config/ciudades.config'; // ← Importar configuración
 
 // Interfaces para el backend
 export interface UbicacionBackend {
@@ -50,6 +51,31 @@ export interface ImagenUploadResponse {
 export interface CrearReporteResponse {
   error: boolean;
   mensaje: string; // "Reporte creado exitosamente, el ID es: 64a7f8e0b27c1234567890ab"
+}
+
+// ✨ NUEVAS INTERFACES PARA OBTENER REPORTES
+export interface ReporteDTO {
+  id: string;
+  titulo: string;
+  descripcion: string;
+  fecha: string;
+  contadorImportante: number;
+  idUsuario: string;
+  ubicacion: UbicacionBackend;
+  fotos: string[];
+  estadoActual: string;
+  ciudad: string;
+  comentarios: string[];
+  esAnonimo: boolean;
+  nombreUsuario?: string;
+}
+
+export interface UbicacionUsuario {
+  latitud: number;
+  longitud: number;
+  ciudad: string;
+  pais?: string;
+  precision?: number;
 }
 
 @Injectable({
@@ -133,6 +159,224 @@ export class ReporteService {
   private hasValidToken(): boolean {
     return !!this.getTokenFromStorage();
   }
+
+  // ✨ NUEVOS MÉTODOS PARA OBTENER REPORTES POR UBICACIÓN
+
+  /**
+   * Obtener reportes por ciudad (REQUIERE AUTENTICACIÓN)
+   */
+  obtenerReportesPorCiudad(ciudad: string, nombre?: string, categoria?: string): Observable<ReporteDTO[]> {
+    console.log('🏙️ Obteniendo reportes para ciudad:', ciudad);
+    
+    // ✨ VERIFICAR AUTENTICACIÓN
+    if (!this.hasValidToken()) {
+      console.error('❌ Token requerido para obtener reportes');
+      return throwError(() => new Error('Debes iniciar sesión para ver los reportes.'));
+    }
+    
+    // Construir parámetros de consulta
+    let params = new HttpParams();
+    params = params.set('ciudad', ciudad.toUpperCase());
+    
+    if (nombre && nombre.trim()) {
+      params = params.set('nombre', nombre.trim());
+    }
+    
+    if (categoria && categoria.trim()) {
+      params = params.set('categoria', categoria.trim());
+    }
+
+    console.log('📊 Parámetros de consulta:', params.toString());
+
+    // ✨ AGREGAR HEADERS DE AUTENTICACIÓN
+    const httpOptions = {
+      headers: this.getAuthHeaders(),
+      params: params
+    };
+
+    return this.http.get<ApiResponse<ReporteDTO[]>>(`${this.BASE_URL}/reportes`, httpOptions)
+      .pipe(
+        map(response => {
+          if (response.error) {
+            throw new Error('Error obteniendo reportes');
+          }
+          console.log(`✅ Reportes obtenidos para ${ciudad}:`, response.mensaje.length);
+          return response.mensaje;
+        }),
+        catchError(error => {
+          console.error('❌ Error obteniendo reportes por ciudad:', error);
+          
+          // Manejo específico de errores de autenticación
+          if (error.status === 401 || error.status === 403) {
+            return throwError(() => new Error('Tu sesión ha expirado. Inicia sesión nuevamente.'));
+          }
+          
+          return throwError(() => new Error(`Error al obtener reportes de ${ciudad}. Verifica tu conexión.`));
+        })
+      );
+  }
+
+  /**
+   * Obtener nombre de ciudad usando geocodificación inversa
+   */
+  obtenerNombreCiudad(latitud: number, longitud: number): Observable<string> {
+    console.log('🌍 Obteniendo nombre de ciudad para coordenadas:', { latitud, longitud });
+    
+    
+    
+    // Usar el token de geocodificación del environment
+    const mapboxToken = environment.geocoding?.mapboxGeocodingToken || 
+                       environment.mapboxToken ||
+                       'pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw'; // Token público de fallback
+    
+    const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${longitud},${latitud}.json`;
+    const params = new HttpParams()
+      .set('access_token', mapboxToken)
+      .set('types', 'place,locality')
+      .set('limit', '1')
+      .set('language', 'es'); // Español para obtener nombres en español
+
+
+    return this.http.get<any>(url, { params })
+      .pipe(
+        map(response => {
+          if (response.features && response.features.length > 0) {
+            // Intentar obtener el nombre de la ciudad
+            const feature = response.features[0];
+            let ciudadNombre = '';
+            
+            // Buscar en el contexto por tipo de lugar
+            if (feature.context) {
+              const lugarContext = feature.context.find((ctx: any) => 
+                ctx.id.includes('place') || ctx.id.includes('locality')
+              );
+              if (lugarContext) {
+                ciudadNombre = lugarContext.text;
+              }
+            }
+            
+            // Si no se encontró en contexto, usar el texto principal
+            if (!ciudadNombre && feature.text) {
+              ciudadNombre = feature.text;
+            }
+            
+            // Si aún no hay nombre, usar el place_name
+            if (!ciudadNombre && feature.place_name) {
+              // Extraer la primera parte del place_name (generalmente es la ciudad)
+              ciudadNombre = feature.place_name.split(',')[0];
+            }
+            
+            // Convertir a mayúsculas y normalizar usando la configuración
+            const ciudadFinal = normalizarNombreCiudad(ciudadNombre);
+            console.log('✅ Ciudad detectada y normalizada:', ciudadFinal);
+            return ciudadFinal;
+          }
+          
+          // Ciudad por defecto si no se puede determinar (ARMENIA)
+          console.warn('⚠️ No se pudo determinar la ciudad, usando ARMENIA por defecto');
+          return normalizarNombreCiudad('ARMENIA');
+        }),
+        catchError(error => {
+          console.error('❌ Error en geocodificación:', error);
+          // Retornar ciudad por defecto en caso de error (ARMENIA)
+          return of(normalizarNombreCiudad('ARMENIA'));
+        })
+      );
+  }
+
+  /**
+   * Obtener ubicación completa del usuario (coordenadas + ciudad)
+   */
+  obtenerUbicacionCompleta(): Observable<UbicacionUsuario> {
+    console.log('📍 Obteniendo ubicación completa del usuario...');
+    
+    return new Observable<UbicacionUsuario>(observer => {
+      if (!navigator.geolocation) {
+        console.warn('⚠️ Geolocalización no soportada');
+        observer.next({
+          latitud: 4.5339,  // ← Coordenadas de Armenia
+          longitud: -75.6811,
+          ciudad: normalizarNombreCiudad('ARMENIA'),
+          precision: 0
+        });
+        observer.complete();
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const coords = {
+            latitud: position.coords.latitude,
+            longitud: position.coords.longitude,
+            precision: position.coords.accuracy
+          };
+          
+          console.log('✅ Coordenadas obtenidas:', coords);
+          
+          // Obtener nombre de ciudad
+          this.obtenerNombreCiudad(coords.latitud, coords.longitud)
+            .subscribe({
+              next: (ciudad) => {
+                const ubicacionCompleta: UbicacionUsuario = {
+                  ...coords,
+                  ciudad: ciudad
+                };
+                console.log('🎯 Ubicación completa:', ubicacionCompleta);
+                observer.next(ubicacionCompleta);
+                observer.complete();
+              },
+              error: (error) => {
+                console.error('❌ Error obteniendo ciudad:', error);
+                // Aún así devolver las coordenadas con ciudad por defecto
+                observer.next({
+                  ...coords,
+                  ciudad: 'PEREIRA'
+                });
+                observer.complete();
+              }
+            });
+        },
+        (error) => {
+          console.warn('⚠️ Error obteniendo ubicación:', error.message);
+          // Ubicación por defecto (Armenia)
+          observer.next({
+            latitud: 4.5339,  // ← Coordenadas de Armenia
+            longitud: -75.6811,
+            ciudad: normalizarNombreCiudad('ARMENIA'),
+            precision: 0
+          });
+          observer.complete();
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 300000
+        }
+      );
+    });
+  }
+
+  /**
+   * Obtener reportes cercanos basados en la ubicación actual
+   */
+  obtenerReportesCercanos(): Observable<ReporteDTO[]> {
+    console.log('🎯 Obteniendo reportes cercanos a la ubicación actual...');
+    
+    return this.obtenerUbicacionCompleta()
+      .pipe(
+        switchMap(ubicacion => {
+          console.log('📍 Ubicación detectada:', ubicacion.ciudad);
+          return this.obtenerReportesPorCiudad(ubicacion.ciudad);
+        }),
+        catchError(error => {
+          console.error('❌ Error obteniendo reportes cercanos:', error);
+          // Intentar con ciudad por defecto (ARMENIA)
+          return this.obtenerReportesPorCiudad(normalizarNombreCiudad('ARMENIA'));
+        })
+      );
+  }
+
+  // MÉTODOS EXISTENTES (mantener todos los anteriores)
 
   /**
    * Obtener todas las categorías disponibles
@@ -391,7 +635,7 @@ export class ReporteService {
             longitud: datosReporte.ubicacion.longitud
           },
           fotos: urlsImagenes,
-          ciudad: 'PEREIRA' // Por defecto, puedes hacer esto dinámico
+          ciudad: 'ARMENIA' // ← CAMBIO: Armenia por defecto
         };
         
         reporteId = await this.crearReporteAnonimo(reporteAnonimo).toPromise() || '';
@@ -529,6 +773,5 @@ export class ReporteService {
   }
 }
 
-function of(arg0: { authenticated: boolean; publicEndpoint: string; protectedEndpoint: string; token: string; error: any; }): any {
-  throw new Error('Function not implemented.');
-}
+// Necesario para el operador switchMap
+// import { switchMap } from 'rxjs/operators'; // Ya importado arriba
