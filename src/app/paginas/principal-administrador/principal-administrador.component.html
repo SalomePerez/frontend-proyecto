@@ -1,107 +1,381 @@
-<!-- Header -->
-<header class="header">
-  <div class="header-left">
-    <div class="logo">
-      <i class="fas fa-shield-alt"></i>
+<div class="principal-administrador-container">
+  <!-- Header/Navbar Admin -->
+  <header class="navbar admin-navbar">
+    <div class="navbar-left">
+      <div class="logo-container">
+        <img src="assets/logo.png" alt="SegurApp Logo" class="logo">
+        <h1 class="app-name">SegurApp <span class="admin-badge">Admin</span></h1>
+      </div>
     </div>
-    <h1 class="app-title">SegurApp</h1>
-  </div>
-  
-  <div class="header-right">
-    <!-- Mis Reportes -->
-    <span class="mis-reportes" (click)="navigateToMisReportes()">Mis Reportes</span>
     
-    <!-- Notificaciones -->
-    <div class="notification-container">
-      <button class="notification-btn" (click)="toggleNotifications()">
-        <i class="fas fa-bell"></i>
-        <span class="notification-badge" *ngIf="notificationCount > 0">
-          {{ notificationCount }}
-        </span>
+    <div class="navbar-right">
+      <!-- Indicador de estadísticas rápidas -->
+      <div class="quick-stats">
+        <div class="stat-item critical" *ngIf="estadisticas.reportesPendientes > 0">
+          <i class="bi bi-exclamation-triangle"></i>
+          <span>{{ estadisticas.reportesPendientes }} pendientes</span>
+        </div>
+        <div class="stat-item">
+          <i class="bi bi-calendar-day"></i>
+          <span>{{ estadisticas.reportesDelDia }} hoy</span>
+        </div>
+      </div>
+      
+      <!-- Ícono de notificaciones -->
+      <button class="nav-icon-btn notification-btn" [title]="'Notificaciones Admin'" (click)="toggleNotifications()">
+        <i class="bi bi-bell"></i>
+        <span class="notification-badge" *ngIf="notificationCount > 0">{{ notificationCount }}</span>
       </button>
       
-      <!-- Dropdown de Notificaciones -->
-      <div class="notification-dropdown" *ngIf="showNotifications">
-        <div class="dropdown-header">
-          <h3>Notificaciones</h3>
+      <!-- Perfil de usuario admin -->
+      <div class="user-profile admin-profile" (click)="toggleUserMenu()">
+        <div class="user-avatar">
+          <i class="bi bi-shield-check"></i>
         </div>
-        <div class="notification-list">
-          <div class="notification-item" *ngFor="let notification of notifications">
-            <p class="notification-text">{{ notification.message }}</p>
-            <span class="notification-time">{{ notification.time }}</span>
+        <span class="user-name">{{ adminName }}</span>
+        <i class="bi bi-chevron-down dropdown-arrow" [class.rotated]="showUserMenu"></i>
+      </div>
+      
+      <!-- Menú desplegable del admin -->
+      <div class="user-dropdown" [class.show]="showUserMenu">
+        <div class="dropdown-item" (click)="goToProfile()">
+          <i class="bi bi-person-gear"></i>
+          <span>Panel Admin</span>
+        </div>
+        <div class="dropdown-item" (click)="goToSettings()">
+          <i class="bi bi-gear"></i>
+          <span>Configuración</span>
+        </div>
+        <div class="dropdown-divider"></div>
+        <div class="dropdown-item logout" (click)="logout()">
+          <i class="bi bi-box-arrow-right"></i>
+          <span>Cerrar Sesión</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Contenido principal -->
+  <main class="main-content">
+    <!-- Panel lateral izquierdo - Menú Admin -->
+    <aside class="sidebar admin-sidebar">
+      <div class="sidebar-content">
+        
+        <!-- Botón Gestión Reportes -->
+        <button class="sidebar-btn reportes-btn" (click)="goToGestionReportes()">
+          <div class="btn-content">
+            <i class="bi bi-folder-check"></i>
+            <span>Gestión Reportes</span>
+          </div>
+        </button>
+
+        <!-- Botón Informes -->
+        <button class="sidebar-btn informes-btn" (click)="goToGestionarInformes()">
+          <div class="btn-content">
+            <i class="bi bi-file-earmark-bar-graph"></i>
+            <span>Gestionar Informes</span>
+          </div>
+        </button>
+
+        <!-- Botón Categorías -->
+        <button class="sidebar-btn categorias-btn" (click)="goToGestionarCategorias()">
+          <div class="btn-content">
+            <i class="bi bi-tags"></i>
+            <span>Gestionar Categorías</span>
+          </div>
+        </button>
+
+        <!-- Botón Salir -->
+        <button class="sidebar-btn salir-btn" (click)="logout()">
+          <div class="btn-content">
+            <i class="bi bi-box-arrow-left"></i>
+            <span>Salir</span>
+          </div>
+        </button>
+      </div>
+    </aside>
+
+    <!-- Área principal con estadísticas y mapa -->
+    <section class="content-area">
+      
+      <!-- Panel de estadísticas -->
+      <div class="estadisticas-panel" [class.collapsed]="!showEstadisticas">
+        <div class="panel-header" (click)="toggleEstadisticas()">
+          <h3><i class="bi bi-graph-up"></i> Panel de Control</h3>
+          <button class="toggle-btn">
+            <i class="bi" [class.bi-chevron-up]="showEstadisticas" [class.bi-chevron-down]="!showEstadisticas"></i>
+          </button>
+        </div>
+        
+        <div class="estadisticas-content" *ngIf="showEstadisticas">
+          <div class="stats-grid">
+            <!-- Total de reportes -->
+            <div class="stat-card total">
+              <div class="stat-icon">
+                <i class="bi bi-clipboard-data"></i>
+              </div>
+              <div class="stat-content">
+                <div class="stat-number">{{ estadisticas.totalReportes }}</div>
+                <div class="stat-label">Total Reportes</div>
+              </div>
+            </div>
+
+            <!-- Reportes pendientes -->
+            <div class="stat-card pendientes">
+              <div class="stat-icon">
+                <i class="bi bi-clock-history"></i>
+              </div>
+              <div class="stat-content">
+                <div class="stat-number">{{ estadisticas.reportesPendientes }}</div>
+                <div class="stat-label">Pendientes</div>
+                <div class="stat-percentage">{{ getPorcentaje(estadisticas.reportesPendientes, estadisticas.totalReportes) }}%</div>
+              </div>
+            </div>
+
+            <!-- En proceso -->
+            <div class="stat-card en-proceso">
+              <div class="stat-icon">
+                <i class="bi bi-gear"></i>
+              </div>
+              <div class="stat-content">
+                <div class="stat-number">{{ estadisticas.reportesEnProceso }}</div>
+                <div class="stat-label">En Proceso</div>
+                <div class="stat-percentage">{{ getPorcentaje(estadisticas.reportesEnProceso, estadisticas.totalReportes) }}%</div>
+              </div>
+            </div>
+
+            <!-- Resueltos -->
+            <div class="stat-card resueltos">
+              <div class="stat-icon">
+                <i class="bi bi-check-circle"></i>
+              </div>
+              <div class="stat-content">
+                <div class="stat-number">{{ estadisticas.reportesResueltos }}</div>
+                <div class="stat-label">Resueltos</div>
+                <div class="stat-percentage">{{ getPorcentaje(estadisticas.reportesResueltos, estadisticas.totalReportes) }}%</div>
+              </div>
+            </div>
+
+            <!-- Reportes del día -->
+            <div class="stat-card del-dia">
+              <div class="stat-icon">
+                <i class="bi bi-calendar-check"></i>
+              </div>
+              <div class="stat-content">
+                <div class="stat-number">{{ estadisticas.reportesDelDia }}</div>
+                <div class="stat-label">Reportes Hoy</div>
+              </div>
+            </div>
+
+            <!-- Usuarios activos -->
+            <div class="stat-card usuarios">
+              <div class="stat-icon">
+                <i class="bi bi-people"></i>
+              </div>
+              <div class="stat-content">
+                <div class="stat-number">{{ estadisticas.usuariosActivos }}</div>
+                <div class="stat-label">Usuarios Activos</div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Acciones rápidas -->
+          <div class="quick-actions">
+            <button class="action-btn" (click)="actualizarEstadisticas()">
+              <i class="bi bi-arrow-clockwise"></i>
+              Actualizar
+            </button>
+            <button class="action-btn" (click)="goToGestionReportes()">
+              <i class="bi bi-eye"></i>
+              Ver Reportes
+            </button>
           </div>
         </div>
       </div>
-    </div>
-    
-    <!-- Perfil de Usuario -->
-    <div class="profile-container">
-      <button class="profile-btn" (click)="toggleProfileMenu()">
-        <i class="fas fa-user"></i>
-        <span>{{ nombreUsuario }}</span>
+
+      <!-- Área del mapa -->
+      <div class="map-container">
+        <div class="map-header">
+          <h2 class="map-title">Mapa Administrativo - {{ userCity }}</h2>
+          <div class="map-controls">
+            <button 
+              class="control-btn" 
+              (click)="centerMap()" 
+              [title]="'Centrar mapa'" 
+              [disabled]="!mapaService.estaInicializado()">
+              <i class="bi bi-geo-alt"></i>
+            </button>
+            <button 
+              class="control-btn" 
+              (click)="toggleMapType()" 
+              [title]="'Cambiar estilo del mapa'" 
+              [disabled]="!mapaService.estaInicializado()">
+              <i class="bi bi-layers"></i>
+            </button>
+            <button 
+              class="control-btn" 
+              (click)="refreshReports()" 
+              [title]="'Actualizar reportes'" 
+              [disabled]="isLoadingMap || !mapaService.estaInicializado()">
+              <i class="bi bi-arrow-clockwise" [class.spinning]="isLoadingMap"></i>
+            </button>
+            <!-- Botón de debug -->
+            <button 
+              class="control-btn debug-btn" 
+              (click)="debugMapInfo()" 
+              [title]="'Debug Map Info'"
+              style="background: #ef4444; color: white;">
+              <i class="bi bi-bug"></i>
+            </button>
+          </div>
+        </div>
+        
+        <!-- Mapa de Mapbox Admin -->
+        <div class="map-wrapper">
+          <!-- Contenedor del mapa Mapbox -->
+          <div 
+            id="admin-mapbox-map" 
+            class="mapbox-map admin-map" 
+            [style.display]="mapError ? 'none' : 'block'"
+            [style.width]="'100%'"
+            [style.height]="'100%'"
+            [style.min-height]="'400px'">
+          </div>
+          
+          <!-- Overlay de carga del mapa -->
+          <div class="map-loading" *ngIf="isLoadingMap && !mapError">
+            <div class="loading-content">
+              <div class="spinner"></div>
+              <p>Cargando mapa administrativo...</p>
+              <small>Conectando con Mapbox...</small>
+            </div>
+          </div>
+
+          <!-- Mensaje de error del mapa -->
+          <div class="map-error" *ngIf="mapError">
+            <div class="error-content">
+              <i class="bi bi-exclamation-triangle-fill"></i>
+              <h3>Error cargando el mapa</h3>
+              <p>{{ mapError }}</p>
+              <div class="error-actions">
+                <button class="btn primary-btn" (click)="retryMapInitialization()">
+                  <i class="bi bi-arrow-clockwise"></i>
+                  Reintentar
+                </button>
+                <button class="btn secondary-btn" (click)="debugMapInfo()">
+                  <i class="bi bi-info-circle"></i>
+                  Ver detalles
+                </button>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Mensaje si no hay ubicación -->
+          <div class="no-location-message" *ngIf="!userLocation && !isLoadingMap && !mapError">
+            <div class="message-content">
+              <i class="bi bi-geo-alt-fill"></i>
+              <h3>Ubicación no disponible</h3>
+              <p>Permite el acceso a tu ubicación para centrar el mapa</p>
+              <button class="btn primary-btn" (click)="requestLocation()">
+                <i class="bi bi-geo-alt"></i>
+                Permitir Ubicación
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Leyenda del mapa admin -->
+        <div class="map-legend admin-legend" *ngIf="!mapError">
+          <h4><i class="bi bi-map"></i> Estados de Reportes</h4>
+          <div class="legend-items">
+            <div class="legend-item">
+              <div class="legend-marker pendiente"></div>
+              <span>Pendiente ({{ estadisticas.reportesPendientes }})</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-marker en-proceso"></div>
+              <span>En Proceso ({{ estadisticas.reportesEnProceso }})</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-marker resuelto"></div>
+              <span>Resuelto ({{ estadisticas.reportesResueltos }})</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-marker rechazado"></div>
+              <span>Rechazado ({{ estadisticas.reportesRechazados }})</span>
+            </div>
+          </div>
+          
+          <!-- Filtros del mapa -->
+          <div class="legend-filters">
+            <button 
+              class="filter-btn active" 
+              (click)="mostrarTodosLosReportes()" 
+              [disabled]="!mapaService.estaInicializado()">
+              <i class="bi bi-eye"></i> Todos
+            </button>
+            <button 
+              class="filter-btn" 
+              (click)="filtrarReportesPorEstado('PENDIENTE')" 
+              [disabled]="!mapaService.estaInicializado()">
+              <i class="bi bi-clock"></i> Pendientes
+            </button>
+          </div>
+        </div>
+        
+        <!-- Información del mapa admin -->
+        <div class="map-info admin-info" *ngIf="!mapError">
+          <div class="info-item">
+            <i class="bi bi-pin-map"></i>
+            <span>{{ reportes.length }} reportes</span>
+          </div>
+          <div class="info-item">
+            <i class="bi bi-shield-check text-primary"></i>
+            <span>Panel Admin</span>
+          </div>
+          <div class="info-item" *ngIf="mapaService.estaInicializado()">
+            <i class="bi bi-check-circle text-success"></i>
+            <span>Mapa activo</span>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Panel de notificaciones admin -->
+  <div class="notifications-panel admin-notifications" [class.show]="showNotifications">
+    <div class="notifications-header">
+      <h3><i class="bi bi-bell"></i> Notificaciones Admin</h3>
+      <button class="close-btn" (click)="closeNotifications()">
+        <i class="bi bi-x"></i>
       </button>
+    </div>
+    <div class="notifications-content">
+      <div class="notification-item admin-notification" 
+           *ngFor="let notification of notifications"
+           [class.unread]="!notification.read">
+        <div class="notification-icon" [class]="notification.type">
+          <i [class]="getNotificationIcon(notification.type)"></i>
+        </div>
+        <div class="notification-text">
+          <h4>{{ notification.title }}</h4>
+          <p>{{ notification.message }}</p>
+          <span class="notification-time">{{ notification.time }}</span>
+        </div>
+        <div class="notification-badge" *ngIf="!notification.read">
+          <i class="bi bi-circle-fill"></i>
+        </div>
+      </div>
       
-      <!-- Dropdown de Perfil -->
-      <div class="profile-dropdown" *ngIf="showProfileMenu">
-        <button class="dropdown-item" (click)="navigateTo('perfil')">
-          <i class="fas fa-user-circle"></i>
-          Ver Perfil
-        </button>
-        <button class="dropdown-item" (click)="openSettings()">
-          <i class="fas fa-cog"></i>
-          Configuración
-        </button>
-        <hr class="dropdown-divider">
-        <button class="dropdown-item logout" (click)="logout()">
-          <i class="fas fa-sign-out-alt"></i>
-          Cerrar Sesión
-        </button>
+      <div class="no-notifications" *ngIf="notifications.length === 0">
+        <i class="bi bi-bell-slash"></i>
+        <p>No tienes notificaciones administrativas</p>
       </div>
     </div>
   </div>
-</header>
 
-<!-- Main Container -->
-<div class="main-container">
-  <!-- Sidebar -->
-  <aside class="sidebar">
-    <div class="sidebar-content">
-      <h2 class="sidebar-title">Panel de Administración</h2>
-      
-      <nav class="sidebar-nav">
-        <button
-          *ngFor="let item of menuItems"
-          class="nav-item"
-          [class.active]="activeComponent === item.id"
-          [ngClass]="item.colorClass"
-          (click)="handleMenuClick(item.id)">
-          <i [class]="item.icon"></i>
-          <span>{{ item.label }}</span>
-        </button>
-      </nav>
-    </div>
-    
-    <!-- Estado del Sistema -->
-    <div class="system-status">
-      <div class="status-content">
-        <span class="status-label">Estado del Sistema</span>
-        <div class="status-indicator">
-          <div class="status-dot active"></div>
-          <span class="status-text">Activo</span>
-        </div>
-      </div>
-    </div>
-  </aside>
-
-  <!-- Main Content -->
-  <main class="main-content">
-    <!-- Aquí se cargan los componentes hijos -->
-    <router-outlet></router-outlet>
-  </main>
-</div>
-
-<!-- Overlay para cerrar dropdowns -->
-<div class="overlay" 
-     *ngIf="showNotifications || showProfileMenu" 
-     (click)="closeAllDropdowns()">
+  <!-- Overlay para cerrar menús -->
+  <div class="overlay" 
+       [class.show]="showUserMenu || showNotifications" 
+       (click)="closeAllMenus()"></div>
 </div>
