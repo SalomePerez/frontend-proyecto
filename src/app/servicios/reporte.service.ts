@@ -773,5 +773,3 @@ export class ReporteService {
   }
 }
 
-// Necesario para el operador switchMap
-// import { switchMap } from 'rxjs/operators'; // Ya importado arriba
