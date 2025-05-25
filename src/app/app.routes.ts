@@ -22,6 +22,7 @@ import { MisReportesComponent } from './paginas/mis-reportes/mis-reportes.compon
 import { ReportesPropiosComponent } from './paginas/reportes-propios/reportes-propios.component';
 import { EditarReporteComponent } from './paginas/editar-reporte/editar-reporte.component';
 
+
 export const routes: Routes = [
   
   // ===== RUTA RAÍZ =====
@@ -53,6 +54,55 @@ export const routes: Routes = [
   { path: 'editar-reporte', component: EditarReporteComponent },
   { path: 'reportes-propios', component: ReportesPropiosComponent },
   
+  // ===== DASHBOARDS - PROTEGIDOS POR ROL =====
+  { 
+    path: 'principal-cliente', 
+    component: PrincipalClienteComponent,
+    canActivate: ['AuthGuard'],
+    data: { role: 'CLIENTE' }
+  },
+  { 
+    path: 'dashboard', 
+    component: PrincipalClienteComponent,
+    canActivate: ['AuthGuard'],
+    data: { role: 'CLIENTE' }
+  },
+
+  // ===== GESTIÓN DE REPORTES - PROTEGIDAS =====
+  { 
+    path: 'crear-reporte', 
+    component: CrearReporteComponent,
+    canActivate: ['AuthGuard'],
+    data: { role: 'CLIENTE' }
+  },
+  { 
+    path: 'detalle-reporte', 
+    component: DetalleReporteComponent,
+    canActivate: ['AuthGuard'],
+    data: { role: 'CLIENTE' }
+  },
+  { 
+    path: 'mis-reportes', 
+    component: MisReportesComponent,
+    canActivate: ['AuthGuard'],
+    data: { role: 'CLIENTE' }
+  },
+
+  {
+  path: 'editar-reporte',
+  component: EditarReporteComponent,
+  canActivate: ['AuthGuard'],
+  data: { role: 'CLIENTE' }
+},
+
+
+  { 
+    path: 'reportes-propios', 
+    component: ReportesPropiosComponent,
+    canActivate: ['AuthGuard'],
+    data: { role: 'CLIENTE' }
+  },
+
   // ===== RUTA WILDCARD (DEBE IR AL FINAL) =====
   { path: '**', redirectTo: '/home' }
 ];
