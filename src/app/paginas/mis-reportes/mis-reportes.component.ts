@@ -40,15 +40,9 @@ export class MisReportesComponent implements OnInit, OnDestroy {
   selectedCategory: string = 'todas';
   searchTerm: string = '';
   
-  
   // Datos de reportes
   reportes: Reporte[] = [];
   reportesFiltrados: Reporte[] = [];
-
-  verDetalles(reporteId: number): void {
-  this.router.navigate(['/detalle-reporte-subidos'], { queryParams: { id: reporteId } });
-}
-  
   
   // Estadísticas
   estadisticas = {
@@ -207,9 +201,9 @@ export class MisReportesComponent implements OnInit, OnDestroy {
         }
       ];
       
-      console.log('Reportes cargados:', this.reportes.length); // Debug
+      console.log('Reportes cargados:', this.reportes.length);
       this.calcularEstadisticas();
-      this.aplicarFiltros(); // Aplicar filtros después de cargar
+      this.aplicarFiltros();
       this.isLoading = false;
     }, 1500);
   }
@@ -227,32 +221,32 @@ export class MisReportesComponent implements OnInit, OnDestroy {
   // Métodos de filtrado
   onFilterChange(event: any): void {
     this.selectedFilter = event.target.value;
-    console.log('Filtro cambiado a:', this.selectedFilter); // Debug
+    console.log('Filtro cambiado a:', this.selectedFilter);
     this.aplicarFiltros();
   }
 
   onCategoryChange(event: any): void {
     this.selectedCategory = event.target.value;
-    console.log('Categoría cambiada a:', this.selectedCategory); // Debug
+    console.log('Categoría cambiada a:', this.selectedCategory);
     this.aplicarFiltros();
   }
 
   onSearchChange(event: any): void {
     this.searchTerm = event.target.value;
-    console.log('Búsqueda:', this.searchTerm); // Debug
+    console.log('Búsqueda:', this.searchTerm);
     this.aplicarFiltros();
   }
 
   private aplicarFiltros(): void {
     let reportesFiltrados = [...this.reportes];
-    console.log('Aplicando filtros - Reportes originales:', reportesFiltrados.length); // Debug
+    console.log('Aplicando filtros - Reportes originales:', reportesFiltrados.length);
 
     // Filtro por estado
     if (this.selectedFilter !== 'todos') {
       reportesFiltrados = reportesFiltrados.filter(reporte => 
         reporte.estado === this.selectedFilter
       );
-      console.log('Después de filtro por estado:', reportesFiltrados.length); // Debug
+      console.log('Después de filtro por estado:', reportesFiltrados.length);
     }
 
     // Filtro por categoría
@@ -260,7 +254,7 @@ export class MisReportesComponent implements OnInit, OnDestroy {
       reportesFiltrados = reportesFiltrados.filter(reporte => 
         reporte.categoria === this.selectedCategory
       );
-      console.log('Después de filtro por categoría:', reportesFiltrados.length); // Debug
+      console.log('Después de filtro por categoría:', reportesFiltrados.length);
     }
 
     // Filtro por búsqueda
@@ -271,11 +265,11 @@ export class MisReportesComponent implements OnInit, OnDestroy {
         reporte.descripcion.toLowerCase().includes(busqueda) ||
         reporte.ubicacion.direccion.toLowerCase().includes(busqueda)
       );
-      console.log('Después de filtro por búsqueda:', reportesFiltrados.length); // Debug
+      console.log('Después de filtro por búsqueda:', reportesFiltrados.length);
     }
 
     this.reportesFiltrados = reportesFiltrados;
-    console.log('Reportes filtrados finales:', this.reportesFiltrados.length); // Debug
+    console.log('Reportes filtrados finales:', this.reportesFiltrados.length);
   }
 
   // Métodos de navegación
@@ -287,8 +281,9 @@ export class MisReportesComponent implements OnInit, OnDestroy {
     this.router.navigate(['/crear-reporte']);
   }
 
-  verDetalleReporte(reporteId: number): void {
-    this.router.navigate(['/detalle-reporte-subidos'], { queryParams: { id: reporteId } }); // ✅ Correcto
+  // ✅ CORREGIDO: Usar parámetros de ruta en lugar de query params
+  verDetalles(reporteId: number): void {
+    this.router.navigate(['/detalles-reportes-subidos', reporteId]);
   }
 
   editarReporte(reporteId: number): void {

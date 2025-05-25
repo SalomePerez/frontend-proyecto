@@ -1,0 +1,107 @@
+<!-- Header -->
+<header class="header">
+  <div class="header-left">
+    <div class="logo">
+      <i class="fas fa-shield-alt"></i>
+    </div>
+    <h1 class="app-title">SegurApp</h1>
+  </div>
+  
+  <div class="header-right">
+    <!-- Mis Reportes -->
+    <span class="mis-reportes" (click)="navigateToMisReportes()">Mis Reportes</span>
+    
+    <!-- Notificaciones -->
+    <div class="notification-container">
+      <button class="notification-btn" (click)="toggleNotifications()">
+        <i class="fas fa-bell"></i>
+        <span class="notification-badge" *ngIf="notificationCount > 0">
+          {{ notificationCount }}
+        </span>
+      </button>
+      
+      <!-- Dropdown de Notificaciones -->
+      <div class="notification-dropdown" *ngIf="showNotifications">
+        <div class="dropdown-header">
+          <h3>Notificaciones</h3>
+        </div>
+        <div class="notification-list">
+          <div class="notification-item" *ngFor="let notification of notifications">
+            <p class="notification-text">{{ notification.message }}</p>
+            <span class="notification-time">{{ notification.time }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Perfil de Usuario -->
+    <div class="profile-container">
+      <button class="profile-btn" (click)="toggleProfileMenu()">
+        <i class="fas fa-user"></i>
+        <span>{{ nombreUsuario }}</span>
+      </button>
+      
+      <!-- Dropdown de Perfil -->
+      <div class="profile-dropdown" *ngIf="showProfileMenu">
+        <button class="dropdown-item" (click)="navigateTo('perfil')">
+          <i class="fas fa-user-circle"></i>
+          Ver Perfil
+        </button>
+        <button class="dropdown-item" (click)="openSettings()">
+          <i class="fas fa-cog"></i>
+          Configuración
+        </button>
+        <hr class="dropdown-divider">
+        <button class="dropdown-item logout" (click)="logout()">
+          <i class="fas fa-sign-out-alt"></i>
+          Cerrar Sesión
+        </button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- Main Container -->
+<div class="main-container">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-content">
+      <h2 class="sidebar-title">Panel de Administración</h2>
+      
+      <nav class="sidebar-nav">
+        <button
+          *ngFor="let item of menuItems"
+          class="nav-item"
+          [class.active]="activeComponent === item.id"
+          [ngClass]="item.colorClass"
+          (click)="handleMenuClick(item.id)">
+          <i [class]="item.icon"></i>
+          <span>{{ item.label }}</span>
+        </button>
+      </nav>
+    </div>
+    
+    <!-- Estado del Sistema -->
+    <div class="system-status">
+      <div class="status-content">
+        <span class="status-label">Estado del Sistema</span>
+        <div class="status-indicator">
+          <div class="status-dot active"></div>
+          <span class="status-text">Activo</span>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <!-- Aquí se cargan los componentes hijos -->
+    <router-outlet></router-outlet>
+  </main>
+</div>
+
+<!-- Overlay para cerrar dropdowns -->
+<div class="overlay" 
+     *ngIf="showNotifications || showProfileMenu" 
+     (click)="closeAllDropdowns()">
+</div>
