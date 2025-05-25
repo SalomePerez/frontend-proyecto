@@ -200,6 +200,12 @@
               {{ getFieldError('ubicacion.direccion') }}
             </div>
           </div>
+
+          <!-- ✨ MOSTRAR COORDENADAS ACTUALES -->
+          <div class="form-tips" *ngIf="reporte.ubicacion.lat && reporte.ubicacion.lng">
+            <i class="bi bi-geo"></i>
+            <span>Coordenadas actuales: {{ reporte.ubicacion.lat.toFixed(4) }}, {{ reporte.ubicacion.lng.toFixed(4) }}</span>
+          </div>
         </section>
 
         <!-- Información de Contacto -->
@@ -236,6 +242,27 @@
                 {{ getFieldError('email') }}
               </div>
             </div>
+          </div>
+        </section>
+
+        <!-- ✨ MOSTRAR IMÁGENES EXISTENTES -->
+        <section class="form-section" *ngIf="reporte.imagenes && reporte.imagenes.length > 0">
+          <div class="section-header">
+            <i class="bi bi-images"></i>
+            <h2>Imágenes Actuales</h2>
+            <span class="section-optional">{{ reporte.imagenes.length }} imagen(es)</span>
+          </div>
+
+          <div class="imagenes-existentes">
+            <div class="imagen-preview" *ngFor="let imagen of reporte.imagenes">
+              <img [src]="imagen" [alt]="'Imagen del reporte'" 
+                   onerror="this.src='assets/images/placeholder-image.png'">
+            </div>
+          </div>
+          
+          <div class="form-tips">
+            <i class="bi bi-info-circle"></i>
+            <span>Las imágenes se mantendrán sin cambios. Para modificar imágenes, contacta al administrador.</span>
           </div>
         </section>
 

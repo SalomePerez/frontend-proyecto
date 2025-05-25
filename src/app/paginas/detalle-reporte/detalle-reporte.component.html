@@ -8,8 +8,21 @@
     </div>
   </div>
 
+  <!-- ✨ MENSAJE DE ERROR -->
+  <div class="error-state" *ngIf="hasError && !isLoading">
+    <div class="error-content">
+      <i class="bi bi-exclamation-triangle"></i>
+      <h3>Error al cargar el reporte</h3>
+      <p>{{ errorMessage }}</p>
+      <button class="btn primary-btn" (click)="goBack()">
+        <i class="bi bi-arrow-left"></i>
+        Volver a Mis Reportes
+      </button>
+    </div>
+  </div>
+
   <!-- Contenido principal -->
-  <div class="detalle-content" *ngIf="!isLoading && reporte">
+  <div class="detalle-content" *ngIf="!isLoading && !hasError && reporte">
     
     <!-- Header -->
     <header class="page-header">
@@ -168,12 +181,13 @@
       <div class="detalle-card imagenes-card" *ngIf="reporte.imagenes && reporte.imagenes.length > 0">
         <div class="card-header">
           <i class="bi bi-images"></i>
-          <h3>Imágenes</h3>
+          <h3>Imágenes ({{ reporte.imagenes.length }})</h3>
         </div>
         <div class="card-body">
           <div class="imagenes-grid">
-            <div class="imagen-item" *ngFor="let imagen of reporte.imagenes">
-              <img [src]="imagen" [alt]="'Imagen del reporte ' + reporte.titulo" />
+            <div class="imagen-item" *ngFor="let imagen of reporte.imagenes" (click)="verImagenCompleta(imagen)">
+              <img [src]="imagen" [alt]="'Imagen del reporte ' + reporte.titulo" 
+                   onerror="this.src='assets/images/placeholder-image.png'" />
               <div class="imagen-overlay">
                 <i class="bi bi-eye"></i>
               </div>
@@ -200,7 +214,7 @@
       </div>
     </section>
 
-    <!-- Timeline de estados (simulado) -->
+    <!-- Timeline de estados (mejorado) -->
     <section class="timeline-section">
       <div class="timeline-card">
         <div class="timeline-header">
@@ -220,17 +234,25 @@
             <div class="timeline-item" [class.active]="reporte.estado !== 'pendiente'">
               <div class="timeline-marker"></div>
               <div class="timeline-content">
-                <h4>En Revisión</h4>
+                <h4 *ngIf="reporte.estado === 'en_proceso'">En Proceso</h4>
+                <h4 *ngIf="reporte.estado === 'resuelto'">Procesado</h4>
+                <h4 *ngIf="reporte.estado === 'rechazado'">Revisado</h4>
+                <h4 *ngIf="reporte.estado === 'eliminado'">Procesado</h4>
+                <h4 *ngIf="reporte.estado === 'pendiente'">En Revisión</h4>
                 <p *ngIf="reporte.estado !== 'pendiente'">{{ formatFecha(reporte.fechaActualizacion) }}</p>
-                <small>Administrador asignado al caso</small>
+                <small *ngIf="reporte.estado === 'en_proceso'">Administrador asignado al caso</small>
+                <small *ngIf="reporte.estado === 'resuelto'">Caso cerrado exitosamente</small>
+                <small *ngIf="reporte.estado === 'rechazado'">Reporte no aprobado</small>
+                <small *ngIf="reporte.estado === 'eliminado'">Reporte removido del sistema</small>
+                <small *ngIf="reporte.estado === 'pendiente'">Esperando asignación</small>
               </div>
             </div>
             <div class="timeline-item" [class.active]="reporte.estado === 'resuelto'">
               <div class="timeline-marker"></div>
               <div class="timeline-content">
-                <h4>Resuelto</h4>
+                <h4>Finalizado</h4>
                 <p *ngIf="reporte.estado === 'resuelto'">{{ formatFecha(reporte.fechaActualizacion) }}</p>
-                <small>Caso cerrado exitosamente</small>
+                <small>Caso cerrado definitivamente</small>
               </div>
             </div>
           </div>
@@ -238,19 +260,6 @@
       </div>
     </section>
 
-  </div>
-
-  <!-- Error state -->
-  <div class="error-state" *ngIf="!isLoading && !reporte">
-    <div class="error-content">
-      <i class="bi bi-exclamation-triangle"></i>
-      <h3>Reporte no encontrado</h3>
-      <p>El reporte que buscas no existe o no tienes permisos para verlo.</p>
-      <button class="btn primary-btn" (click)="goBack()">
-        <i class="bi bi-arrow-left"></i>
-        Volver a Mis Reportes
-      </button>
-    </div>
   </div>
 
 </div>

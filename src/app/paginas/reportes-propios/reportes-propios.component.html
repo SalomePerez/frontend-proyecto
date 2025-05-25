@@ -15,11 +15,30 @@
         <i class="bi bi-plus-circle"></i>
         <span>Crear Reporte</span>
       </button>
+      <!-- ✨ BOTÓN PARA REFRESCAR -->
+      <button class="btn secondary-btn" (click)="refrescarReportes()" [disabled]="isLoading" title="Refrescar mis reportes">
+        <i class="bi bi-arrow-clockwise" [class.spin]="isLoading"></i>
+        <span *ngIf="!isLoading">Refrescar</span>
+        <span *ngIf="isLoading">Cargando...</span>
+      </button>
     </div>
   </header>
 
+  <!-- ✨ MENSAJE DE ERROR -->
+  <div class="error-container" *ngIf="hasError && !isLoading">
+    <div class="error-content">
+      <i class="bi bi-exclamation-triangle"></i>
+      <h3>Error al cargar tus reportes</h3>
+      <p>{{ errorMessage }}</p>
+      <button class="btn primary-btn" (click)="refrescarReportes()">
+        <i class="bi bi-arrow-clockwise"></i>
+        Reintentar
+      </button>
+    </div>
+  </div>
+
   <!-- Estadísticas -->
-  <section class="estadisticas-section">
+  <section class="estadisticas-section" *ngIf="!hasError">
     <div class="estadisticas-grid">
       <div class="estadistica-card total">
         <div class="estadistica-icon">
@@ -64,7 +83,7 @@
   </section>
 
   <!-- Filtros y búsqueda -->
-  <section class="filtros-section">
+  <section class="filtros-section" *ngIf="!hasError">
     <div class="filtros-container">
       <div class="filtros-left">
         <div class="filtro-grupo">
@@ -75,6 +94,7 @@
             <option value="en_proceso">En Proceso</option>
             <option value="resuelto">Resueltos</option>
             <option value="rechazado">Rechazados</option>
+            <option value="eliminado">Eliminados</option>
           </select>
         </div>
         
@@ -116,20 +136,20 @@
     </div>
 
     <!-- Lista de reportes -->
-    <div class="reportes-grid" *ngIf="!isLoading">
+    <div class="reportes-grid" *ngIf="!isLoading && !hasError">
       <!-- Mensaje si no hay reportes -->
       <div class="no-reportes-message" *ngIf="reportesFiltrados.length === 0">
         <div class="no-reportes-content">
           <i class="bi bi-person-x"></i>
-          <h3 *ngIf="selectedFilter === 'todos' && !searchTerm">¡Aún no has creado reportes!</h3>
-          <h3 *ngIf="selectedFilter !== 'todos' || searchTerm">No hay reportes que coincidan</h3>
-          <p *ngIf="selectedFilter === 'todos' && !searchTerm">
+          <h3 *ngIf="selectedFilter === 'todos' && !searchTerm && reportesPropios.length === 0">¡Aún no has creado reportes!</h3>
+          <h3 *ngIf="selectedFilter !== 'todos' || searchTerm || reportesPropios.length > 0">No hay reportes que coincidan</h3>
+          <p *ngIf="selectedFilter === 'todos' && !searchTerm && reportesPropios.length === 0">
             Crear reportes te ayuda a mantener tu comunidad segura e informada.
           </p>
-          <p *ngIf="selectedFilter !== 'todos' || searchTerm">
+          <p *ngIf="selectedFilter !== 'todos' || searchTerm || reportesPropios.length > 0">
             Intenta cambiar los filtros de búsqueda para encontrar tus reportes.
           </p>
-          <button class="btn primary-btn" (click)="crearNuevoReporte()" *ngIf="selectedFilter === 'todos' && !searchTerm">
+          <button class="btn primary-btn" (click)="crearNuevoReporte()" *ngIf="selectedFilter === 'todos' && !searchTerm && reportesPropios.length === 0">
             <i class="bi bi-plus-circle"></i>
             Crear Mi Primer Reporte
           </button>
@@ -178,6 +198,14 @@
             </div>
           </div>
 
+          <!-- ✨ MOSTRAR IMÁGENES SI EXISTEN -->
+          <div class="reporte-imagenes" *ngIf="reporte.imagenes && reporte.imagenes.length > 0">
+            <div class="imagenes-header">
+              <i class="bi bi-images"></i>
+              <span>{{ reporte.imagenes.length }} imagen{{ reporte.imagenes.length > 1 ? 'es' : '' }}</span>
+            </div>
+          </div>
+
           <!-- Comentarios del admin si existen -->
           <div class="admin-comentarios" *ngIf="reporte.comentariosAdmin">
             <div class="comentarios-header">
@@ -204,6 +232,17 @@
             <i class="bi bi-pencil"></i>
             Editar
           </button>
+
+          <!-- ✨ BOTÓN MARCAR COMO RESUELTO (solo para reportes en proceso) -->
+          <button 
+            class="btn primary-btn"
+            (click)="marcarComoResuelto(reporte.id)"
+            *ngIf="reporte.estado === 'en_proceso'"
+            title="Marcar este reporte como resuelto"
+          >
+            <i class="bi bi-check-circle"></i>
+            Resolver
+          </button>
           
           <!-- Botón Eliminar (solo si está pendiente) -->
           <button 
@@ -217,9 +256,17 @@
           </button>
           
           <!-- Mensaje si no se puede editar -->
-          <div class="action-info" *ngIf="reporte.estado !== 'pendiente'">
+          <div class="action-info" *ngIf="reporte.estado !== 'pendiente' && reporte.estado !== 'en_proceso'">
             <i class="bi bi-info-circle"></i>
-            <span>Este reporte ya está siendo procesado</span>
+            <span *ngIf="reporte.estado === 'resuelto'">Este reporte ya está resuelto</span>
+            <span *ngIf="reporte.estado === 'rechazado'">Este reporte fue rechazado</span>
+            <span *ngIf="reporte.estado === 'eliminado'">Este reporte fue eliminado</span>
+          </div>
+
+          <!-- ✨ MENSAJE PARA REPORTES EN PROCESO -->
+          <div class="action-info" *ngIf="reporte.estado === 'en_proceso'">
+            <i class="bi bi-gear"></i>
+            <span>Reporte en proceso - Puedes marcarlo como resuelto</span>
           </div>
         </div>
       </div>

@@ -1,38 +1,24 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 
-// Interfaces
-interface Reporte {
-  id: number;
-  titulo: string;
-  descripcion: string;
-  categoria: 'emergencia' | 'seguridad' | 'infraestructura' | 'otros';
-  estado: 'pendiente' | 'en_proceso' | 'resuelto' | 'rechazado';
-  prioridad: 'baja' | 'media' | 'alta' | 'critica';
-  fechaCreacion: string;
-  fechaActualizacion: string;
-  ubicacion: {
-    direccion: string;
-    lat: number;
-    lng: number;
-  };
-  imagenes?: string[];
-  comentariosAdmin?: string;
-}
+// ✨ IMPORTAR SERVICIO Y INTERFACES ACTUALIZADOS
+import { ReporteService, ReporteZonaDTO, EstadisticasZona, ComentarioDTO } from '../../servicios/reporte.service';
 
 @Component({
-  selector: 'app-mis-reportes',
+  selector: 'app-reportes-zona',
   standalone: true,
-  imports: [CommonModule],
-  templateUrl: './mis-reportes.component.html',
+  imports: [CommonModule, FormsModule],
+  templateUrl: './mis-reportes.component.html', // Reusar el mismo template
   styleUrls: ['./mis-reportes.component.css']
 })
 export class MisReportesComponent implements OnInit, OnDestroy {
   
   // Datos del usuario
-  userName: string = 'Cliente SegurApp';
+  userName: string = 'Usuario SegurApp';
   
   // Estados de la UI
   isLoading: boolean = true;
@@ -40,11 +26,11 @@ export class MisReportesComponent implements OnInit, OnDestroy {
   selectedCategory: string = 'todas';
   searchTerm: string = '';
   
-  // Datos de reportes
-  reportes: Reporte[] = [];
-  reportesFiltrados: Reporte[] = [];
+  // ✨ DATOS DE REPORTES DE ZONA
+  reportes: ReporteZonaDTO[] = [];
+  reportesFiltrados: ReporteZonaDTO[] = [];
   
-  // Estadísticas
+  // ✨ ESTADÍSTICAS DE ZONA
   estadisticas = {
     total: 0,
     pendientes: 0,
@@ -53,14 +39,27 @@ export class MisReportesComponent implements OnInit, OnDestroy {
     rechazados: 0
   };
 
+  // ✨ ESTADO PARA COMENTARIOS
+  mostrandoComentarios: { [reporteId: string]: boolean } = {};
+  comentariosReporte: { [reporteId: string]: ComentarioDTO[] } = {};
+  nuevoComentario: { [reporteId: string]: string } = {};
+  enviandoComentario: { [reporteId: string]: boolean } = {};
+
+  // ✨ MANEJO DE ERRORES
+  errorMessage: string = '';
+  hasError: boolean = false;
+
   private destroy$ = new Subject<void>();
 
-  constructor(private router: Router) {
+  constructor(
+    private router: Router,
+    private reporteService: ReporteService // ✨ SERVICIO INYECTADO
+  ) {
     this.loadUserData();
   }
 
   ngOnInit(): void {
-    this.loadReportes();
+    this.loadReportesZona();
   }
 
   ngOnDestroy(): void {
@@ -74,7 +73,7 @@ export class MisReportesComponent implements OnInit, OnDestroy {
       if (userData) {
         try {
           const user = JSON.parse(userData);
-          this.userName = `${user.nombre} ${user.apellido}` || 'Cliente SegurApp';
+          this.userName = `${user.nombre} ${user.apellido}` || 'Usuario SegurApp';
         } catch (error) {
           console.warn('Error parsing user data:', error);
         }
@@ -82,143 +81,65 @@ export class MisReportesComponent implements OnInit, OnDestroy {
     }
   }
 
-  private loadReportes(): void {
+  // ✨ CARGAR REPORTES DE LA ZONA
+  private loadReportesZona(): void {
     this.isLoading = true;
+    this.hasError = false;
+    this.errorMessage = '';
     
-    // Simular carga de datos desde el servidor
-    setTimeout(() => {
-      this.reportes = [
-        {
-          id: 1,
-          titulo: 'Robo en la calle 45',
-          descripcion: 'Se presentó un robo a mano armada en la calle 45 con carrera 12. Los delincuentes se movilizaban en motocicleta.',
-          categoria: 'seguridad',
-          estado: 'en_proceso',
-          prioridad: 'alta',
-          fechaCreacion: '2024-01-15T10:30:00',
-          fechaActualizacion: '2024-01-16T14:20:00',
-          ubicacion: {
-            direccion: 'Calle 45 # 12-34, Bogotá',
-            lat: 4.6097,
-            lng: -74.0817
-          },
-          imagenes: ['assets/reporte1.jpg'],
-          comentariosAdmin: 'Se ha enviado patrulla al área. Caso bajo investigación.'
+    console.log('🌍 Cargando reportes de la zona...');
+    
+    this.reporteService.obtenerReportesZona()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (reportesBackend) => {
+          console.log('✅ Reportes de zona cargados:', reportesBackend.length);
+          
+          // Convertir reportes del backend al formato del frontend
+          this.reportes = reportesBackend.map(reporte => 
+            this.reporteService.convertirReporteZonaAFrontend(reporte)
+          );
+          
+          this.calcularEstadisticas();
+          this.aplicarFiltros();
+          this.isLoading = false;
         },
-        {
-          id: 2,
-          titulo: 'Semáforo dañado',
-          descripcion: 'El semáforo de la intersección está completamente apagado, causando congestión vehicular.',
-          categoria: 'infraestructura',
-          estado: 'resuelto',
-          prioridad: 'media',
-          fechaCreacion: '2024-01-14T08:15:00',
-          fechaActualizacion: '2024-01-15T16:45:00',
-          ubicacion: {
-            direccion: 'Carrera 15 con Calle 72, Bogotá',
-            lat: 4.6097,
-            lng: -74.0817
-          },
-          comentariosAdmin: 'Semáforo reparado el 15/01/2024. Funcionando correctamente.'
-        },
-        {
-          id: 3,
-          titulo: 'Accidente de tránsito',
-          descripcion: 'Colisión entre dos vehículos particulares. Se requiere presencia de tránsito y ambulancia.',
-          categoria: 'emergencia',
-          estado: 'resuelto',
-          prioridad: 'critica',
-          fechaCreacion: '2024-01-13T16:22:00',
-          fechaActualizacion: '2024-01-13T17:30:00',
-          ubicacion: {
-            direccion: 'Autopista Norte Km 5, Bogotá',
-            lat: 4.6097,
-            lng: -74.0817
-          },
-          comentariosAdmin: 'Atendido por servicios de emergencia. Vía despejada.'
-        },
-        {
-          id: 4,
-          titulo: 'Ruido excesivo',
-          descripcion: 'Establecimiento comercial con música a alto volumen durante horas no permitidas.',
-          categoria: 'otros',
-          estado: 'pendiente',
-          prioridad: 'baja',
-          fechaCreacion: '2024-01-16T22:30:00',
-          fechaActualizacion: '2024-01-16T22:30:00',
-          ubicacion: {
-            direccion: 'Calle 85 # 15-20, Bogotá',
-            lat: 4.6097,
-            lng: -74.0817
+        error: (error) => {
+          console.error('❌ Error cargando reportes de zona:', error);
+          this.hasError = true;
+          this.errorMessage = error.message || 'Error al cargar los reportes de la zona';
+          this.isLoading = false;
+          
+          // Si es error de autenticación, redirigir al login
+          if (error.message.includes('sesión ha expirado') || error.message.includes('iniciar sesión')) {
+            setTimeout(() => {
+              this.router.navigate(['/login']);
+            }, 3000);
           }
-        },
-        {
-          id: 5,
-          titulo: 'Fuga de agua',
-          descripcion: 'Gran fuga de agua en la tubería principal de la calle, causando inundación.',
-          categoria: 'infraestructura',
-          estado: 'rechazado',
-          prioridad: 'alta',
-          fechaCreacion: '2024-01-12T12:00:00',
-          fechaActualizacion: '2024-01-14T10:15:00',
-          ubicacion: {
-            direccion: 'Calle 30 # 25-10, Bogotá',
-            lat: 4.6097,
-            lng: -74.0817
-          },
-          comentariosAdmin: 'Reporte duplicado. Ya existe un reporte similar en proceso.'
-        },
-        {
-          id: 6,
-          titulo: 'Intento de robo de vehículo',
-          descripcion: 'Intento de hurto de automóvil en parqueadero público. Los delincuentes huyeron al ser descubiertos.',
-          categoria: 'seguridad',
-          estado: 'pendiente',
-          prioridad: 'alta',
-          fechaCreacion: '2024-01-17T06:45:00',
-          fechaActualizacion: '2024-01-17T06:45:00',
-          ubicacion: {
-            direccion: 'Centro Comercial Plaza Central, Bogotá',
-            lat: 4.6097,
-            lng: -74.0817
-          }
-        },
-        {
-          id: 7,
-          titulo: 'Incendio en casa',
-          descripcion: 'Principio de incendio en vivienda unifamiliar. Bomberos y ambulancia en camino.',
-          categoria: 'emergencia',
-          estado: 'en_proceso',
-          prioridad: 'critica',
-          fechaCreacion: '2024-01-17T11:20:00',
-          fechaActualizacion: '2024-01-17T11:25:00',
-          ubicacion: {
-            direccion: 'Barrio Los Rosales, Calle 95 # 8-14, Bogotá',
-            lat: 4.6097,
-            lng: -74.0817
-          },
-          comentariosAdmin: 'Bomberos en el lugar. Evacuación en proceso.'
         }
-      ];
-      
-      console.log('Reportes cargados:', this.reportes.length);
-      this.calcularEstadisticas();
-      this.aplicarFiltros();
-      this.isLoading = false;
-    }, 1500);
+      });
   }
 
+  // ✨ CALCULAR ESTADÍSTICAS DE ZONA
   private calcularEstadisticas(): void {
+    const stats = this.reporteService.calcularEstadisticasZona(this.reportes);
     this.estadisticas = {
-      total: this.reportes.length,
-      pendientes: this.reportes.filter(r => r.estado === 'pendiente').length,
-      enProceso: this.reportes.filter(r => r.estado === 'en_proceso').length,
-      resueltos: this.reportes.filter(r => r.estado === 'resuelto').length,
-      rechazados: this.reportes.filter(r => r.estado === 'rechazado').length
+      total: stats.total,
+      pendientes: stats.pendientes,
+      enProceso: stats.enProceso,
+      resueltos: stats.resueltos,
+      rechazados: stats.rechazados
     };
+    console.log('📊 Estadísticas de zona calculadas:', this.estadisticas);
   }
 
-  // Métodos de filtrado
+  // ✨ REFRESCAR REPORTES DE LA ZONA
+  refrescarReportes(): void {
+    console.log('🔄 Refrescando reportes de la zona...');
+    this.loadReportesZona();
+  }
+
+  // MÉTODOS DE FILTRADO (mantener los existentes)
   onFilterChange(event: any): void {
     this.selectedFilter = event.target.value;
     console.log('Filtro cambiado a:', this.selectedFilter);
@@ -263,7 +184,8 @@ export class MisReportesComponent implements OnInit, OnDestroy {
       reportesFiltrados = reportesFiltrados.filter(reporte =>
         reporte.titulo.toLowerCase().includes(busqueda) ||
         reporte.descripcion.toLowerCase().includes(busqueda) ||
-        reporte.ubicacion.direccion.toLowerCase().includes(busqueda)
+        reporte.ubicacion.direccion.toLowerCase().includes(busqueda) ||
+        reporte.nombreUsuario.toLowerCase().includes(busqueda)
       );
       console.log('Después de filtro por búsqueda:', reportesFiltrados.length);
     }
@@ -272,7 +194,96 @@ export class MisReportesComponent implements OnInit, OnDestroy {
     console.log('Reportes filtrados finales:', this.reportesFiltrados.length);
   }
 
-  // Métodos de navegación
+  // ✨ MÉTODOS PARA COMENTARIOS
+
+  /**
+   * Alternar la visualización de comentarios
+   */
+  toggleComentarios(reporteId: string): void {
+    console.log('💬 Alternando comentarios para reporte:', reporteId);
+    
+    const estaVisible = this.mostrandoComentarios[reporteId];
+    this.mostrandoComentarios[reporteId] = !estaVisible;
+    
+    // Si se está mostrando por primera vez, cargar comentarios
+    if (!estaVisible && !this.comentariosReporte[reporteId]) {
+      this.cargarComentarios(reporteId);
+    }
+  }
+
+  /**
+   * Cargar comentarios de un reporte
+   */
+  private cargarComentarios(reporteId: string): void {
+    console.log('📥 Cargando comentarios para reporte:', reporteId);
+    
+    this.reporteService.obtenerComentariosReporte(reporteId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (comentarios) => {
+          console.log('✅ Comentarios cargados:', comentarios.length);
+          this.comentariosReporte[reporteId] = comentarios;
+        },
+        error: (error) => {
+          console.error('❌ Error cargando comentarios:', error);
+          alert('Error al cargar los comentarios: ' + error.message);
+        }
+      });
+  }
+
+  /**
+   * Agregar nuevo comentario
+   */
+  agregarComentario(reporteId: string): void {
+    const contenido = this.nuevoComentario[reporteId]?.trim();
+    
+    if (!contenido) {
+      alert('Por favor escribe un comentario');
+      return;
+    }
+
+    console.log('📝 Agregando comentario al reporte:', reporteId);
+    
+    this.enviandoComentario[reporteId] = true;
+    
+    this.reporteService.agregarComentarioReporte(reporteId, contenido)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          console.log('✅ Comentario agregado exitosamente');
+          this.nuevoComentario[reporteId] = ''; // Limpiar campo
+          this.cargarComentarios(reporteId); // Recargar comentarios
+          this.enviandoComentario[reporteId] = false;
+        },
+        error: (error) => {
+          console.error('❌ Error agregando comentario:', error);
+          alert('Error al agregar comentario: ' + error.message);
+          this.enviandoComentario[reporteId] = false;
+        }
+      });
+  }
+
+  /**
+   * Verificar si se pueden mostrar comentarios para un reporte
+   */
+  puedeComentarReporte(reporte: ReporteZonaDTO): boolean {
+    // Se puede comentar si:
+    // - No es un reporte propio
+    // - El reporte no está eliminado
+    // - El reporte no está rechazado
+    return !reporte.esPropio && 
+           reporte.estado !== 'eliminado' && 
+           reporte.estado !== 'rechazado';
+  }
+
+  /**
+   * Obtener número de comentarios para mostrar
+   */
+  getNumeroComentarios(reporteId: string): number {
+    return this.comentariosReporte[reporteId]?.length || 0;
+  }
+
+  // MÉTODOS DE NAVEGACIÓN
   goBack(): void {
     this.router.navigate(['/principal-cliente']);
   }
@@ -281,16 +292,54 @@ export class MisReportesComponent implements OnInit, OnDestroy {
     this.router.navigate(['/crear-reporte']);
   }
 
-  // ✅ CORREGIDO: Usar parámetros de ruta en lugar de query params
-  verDetalles(reporteId: number): void {
+  verDetalles(reporteId: string): void {
     this.router.navigate(['/detalles-reportes-subidos', reporteId]);
   }
 
-  editarReporte(reporteId: number): void {
+  // ✨ EDITAR SOLO SI ES REPORTE PROPIO
+  editarReporte(reporteId: string): void {
+    const reporte = this.reportes.find(r => r.id === reporteId);
+    if (!reporte) {
+      console.error('Reporte no encontrado');
+      return;
+    }
+
+    if (!reporte.esPropio) {
+      alert('Solo puedes editar tus propios reportes');
+      return;
+    }
+
+    if (reporte.estado !== 'pendiente') {
+      alert('Solo puedes editar reportes en estado pendiente');
+      return;
+    }
+
     this.router.navigate(['/editar-reporte'], { queryParams: { id: reporteId } });
   }
 
-  // Métodos de utilidad
+  // ✨ MARCAR COMO IMPORTANTE (PARA CUALQUIER REPORTE)
+  marcarComoImportante(reporteId: string): void {
+    console.log('⭐ Marcando reporte como importante:', reporteId);
+    
+    this.reporteService.marcarComoImportante(reporteId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          console.log('✅ Reporte marcado como importante');
+          // Actualizar contador localmente
+          const reporte = this.reportes.find(r => r.id === reporteId);
+          if (reporte) {
+            reporte.contadorImportante = (reporte.contadorImportante || 0) + 1;
+          }
+        },
+        error: (error) => {
+          console.error('❌ Error marcando como importante:', error);
+          alert('Error al marcar como importante: ' + error.message);
+        }
+      });
+  }
+
+  // MÉTODOS DE UTILIDAD (mantener los existentes)
   getCategoriaIcon(categoria: string): string {
     switch (categoria) {
       case 'emergencia':
@@ -331,6 +380,8 @@ export class MisReportesComponent implements OnInit, OnDestroy {
         return 'estado-resuelto';
       case 'rechazado':
         return 'estado-rechazado';
+      case 'eliminado':
+        return 'estado-eliminado';
       default:
         return 'estado-pendiente';
     }
@@ -346,6 +397,8 @@ export class MisReportesComponent implements OnInit, OnDestroy {
         return 'Resuelto';
       case 'rechazado':
         return 'Rechazado';
+      case 'eliminado':
+        return 'Eliminado';
       default:
         return 'Desconocido';
     }
@@ -367,34 +420,43 @@ export class MisReportesComponent implements OnInit, OnDestroy {
   }
 
   formatFecha(fecha: string): string {
-    const date = new Date(fecha);
-    return date.toLocaleDateString('es-CO', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    try {
+      const date = new Date(fecha);
+      return date.toLocaleDateString('es-CO', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (error) {
+      console.error('Error formateando fecha:', error);
+      return 'Fecha no disponible';
+    }
   }
 
-  // Método para obtener tiempo transcurrido
   getTiempoTranscurrido(fecha: string): string {
-    const ahora = new Date();
-    const fechaReporte = new Date(fecha);
-    const diferencia = ahora.getTime() - fechaReporte.getTime();
-    
-    const minutos = Math.floor(diferencia / (1000 * 60));
-    const horas = Math.floor(diferencia / (1000 * 60 * 60));
-    const dias = Math.floor(diferencia / (1000 * 60 * 60 * 24));
-    
-    if (dias > 0) {
-      return `Hace ${dias} día${dias > 1 ? 's' : ''}`;
-    } else if (horas > 0) {
-      return `Hace ${horas} hora${horas > 1 ? 's' : ''}`;
-    } else if (minutos > 0) {
-      return `Hace ${minutos} minuto${minutos > 1 ? 's' : ''}`;
-    } else {
-      return 'Hace un momento';
+    try {
+      const ahora = new Date();
+      const fechaReporte = new Date(fecha);
+      const diferencia = ahora.getTime() - fechaReporte.getTime();
+      
+      const minutos = Math.floor(diferencia / (1000 * 60));
+      const horas = Math.floor(diferencia / (1000 * 60 * 60));
+      const dias = Math.floor(diferencia / (1000 * 60 * 60 * 24));
+      
+      if (dias > 0) {
+        return `Hace ${dias} día${dias > 1 ? 's' : ''}`;
+      } else if (horas > 0) {
+        return `Hace ${horas} hora${horas > 1 ? 's' : ''}`;
+      } else if (minutos > 0) {
+        return `Hace ${minutos} minuto${minutos > 1 ? 's' : ''}`;
+      } else {
+        return 'Hace un momento';
+      }
+    } catch (error) {
+      console.error('Error calculando tiempo transcurrido:', error);
+      return 'Tiempo no disponible';
     }
   }
 }

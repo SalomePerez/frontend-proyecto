@@ -5,13 +5,16 @@ import { Router, ActivatedRoute } from '@angular/router';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 
-// Interface del reporte
-interface Reporte {
-  id: number;
+// ✨ INTEGRACIÓN CON BACKEND
+import { ReporteService, MiReporteDTO, EditarReporteDTO, CategoriaBackend } from '../../servicios/reporte.service';
+
+// Interface local para el formulario
+interface ReporteEdicion {
+  id: string;
   titulo: string;
   descripcion: string;
-  categoria: 'emergencia' | 'seguridad' | 'infraestructura' | 'otros';
-  estado: 'pendiente' | 'en_proceso' | 'resuelto' | 'rechazado';
+  categoria: string;
+  estado: 'pendiente' | 'en_proceso' | 'resuelto' | 'rechazado' | 'eliminado';
   prioridad: 'baja' | 'media' | 'alta' | 'critica';
   fechaCreacion: string;
   fechaActualizacion: string;
@@ -22,7 +25,6 @@ interface Reporte {
   };
   imagenes?: string[];
   comentariosAdmin?: string;
-  esPropio?: boolean;
   detallesAdicionales?: {
     telefono?: string;
     email?: string;
@@ -54,40 +56,17 @@ interface Prioridad {
 export class EditarReporteComponent implements OnInit, OnDestroy {
   
   editarForm!: FormGroup;
-  reporte: Reporte | null = null;
+  reporte: ReporteEdicion | null = null;
   isLoading: boolean = true;
   isSaving: boolean = false;
-  reporteId: number | null = null;
+  reporteId: string | null = null; // ✨ CAMBIAR A STRING
   error: string | null = null;
   showSuccessNotification: boolean = false;
   currentTime: Date = new Date();
   
-  categorias: Categoria[] = [
-    { 
-      value: 'emergencia', 
-      label: 'Emergencia', 
-      icon: 'bi bi-exclamation-triangle-fill',
-      color: '#ef4444'
-    },
-    { 
-      value: 'seguridad', 
-      label: 'Seguridad', 
-      icon: 'bi bi-shield-exclamation',
-      color: '#f59e0b'
-    },
-    { 
-      value: 'infraestructura', 
-      label: 'Infraestructura', 
-      icon: 'bi bi-tools',
-      color: '#3b82f6'
-    },
-    { 
-      value: 'otros', 
-      label: 'Otros', 
-      icon: 'bi bi-chat-dots',
-      color: '#6b7280'
-    }
-  ];
+  // ✨ CATEGORÍAS DEL BACKEND
+  categorias: Categoria[] = [];
+  categoriasBackend: CategoriaBackend[] = [];
 
   prioridades: Prioridad[] = [
     { value: 'baja', label: 'Baja', color: '#10b981' },
@@ -96,82 +75,13 @@ export class EditarReporteComponent implements OnInit, OnDestroy {
     { value: 'critica', label: 'Crítica', color: '#7c2d12' }
   ];
 
-  // Datos de ejemplo (igual que en detalle-reporte)
-  private reportesData: Reporte[] = [
-    {
-      id: 1,
-      titulo: 'Robo en mi cuadra',
-      descripcion: 'Vi un robo a mano armada en la calle 45 con carrera 12. Los delincuentes se movilizaban en motocicleta negra, eran dos personas, una conducía y la otra amenazó con un arma de fuego a una señora que caminaba por la acera. Le quitaron el bolso y el celular. Todo ocurrió aproximadamente a las 8:30 PM. La señora gritó pidiendo ayuda pero cuando salimos ya se habían ido. Llamamos inmediatamente a la policía.',
-      categoria: 'seguridad',
-      estado: 'pendiente',
-      prioridad: 'alta',
-      fechaCreacion: '2024-01-15T10:30:00',
-      fechaActualizacion: '2024-01-16T14:20:00',
-      ubicacion: {
-        direccion: 'Calle 45 # 12-34, Bogotá',
-        lat: 4.6097,
-        lng: -74.0817
-      },
-      imagenes: ['assets/reporte1.jpg'],
-      comentariosAdmin: 'Se ha enviado patrulla al área. Caso bajo investigación.',
-      esPropio: true,
-      detallesAdicionales: {
-        telefono: '300-123-4567',
-        email: 'usuario@email.com',
-        testigos: ['Juan Pérez (Transeúnte)', 'María García (Propietaria de tienda)'],
-        evidencias: ['Fotografía de la escena', 'Video de cámara de seguridad']
-      }
-    },
-    {
-      id: 4,
-      titulo: 'Ruido excesivo del bar',
-      descripcion: 'El bar de mi cuadra tiene música muy alta todas las noches después de las 11 PM, violando las normas de ruido establecidas por la alcaldía. Esto viene sucediendo desde hace aproximadamente 3 semanas. He intentado hablar con el dueño pero no ha dado resultado. La música se extiende hasta altas horas de la madrugada (2-3 AM) afectando el descanso de todos los vecinos, especialmente de los niños y personas mayores del sector.',
-      categoria: 'otros',
-      estado: 'pendiente',
-      prioridad: 'baja',
-      fechaCreacion: '2024-01-16T22:30:00',
-      fechaActualizacion: '2024-01-16T22:30:00',
-      ubicacion: {
-        direccion: 'Calle 85 # 15-20, Bogotá',
-        lat: 4.6097,
-        lng: -74.0817
-      },
-      esPropio: true,
-      detallesAdicionales: {
-        telefono: '300-111-2222',
-        email: 'vecino@email.com',
-        evidencias: ['Audio grabado', 'Fotografía del establecimiento']
-      }
-    },
-    {
-      id: 8,
-      titulo: 'Hueco peligroso en la vía',
-      descripcion: 'Hay un hueco muy grande en la carrera 15 que está causando accidentes de motocicletas y daños a vehículos. El hueco tiene aproximadamente 80 cm de diámetro y 30 cm de profundidad. Se formó después de las lluvias de la semana pasada. Ya he visto al menos 3 motociclistas que han tenido problemas al pasar por ahí, uno de ellos se cayó y se lastimó el brazo. Es urgente que se repare antes de que ocurra un accidente más grave.',
-      categoria: 'infraestructura',
-      estado: 'pendiente',
-      prioridad: 'media',
-      fechaCreacion: '2024-01-17T08:15:00',
-      fechaActualizacion: '2024-01-17T08:15:00',
-      ubicacion: {
-        direccion: 'Carrera 15 # 34-45, Bogotá',
-        lat: 4.6097,
-        lng: -74.0817
-      },
-      esPropio: true,
-      detallesAdicionales: {
-        telefono: '300-987-6543',
-        email: 'usuario3@email.com',
-        evidencias: ['Fotografía del hueco', 'Video del incidente']
-      }
-    }
-  ];
-
   private destroy$ = new Subject<void>();
 
   constructor(
     private formBuilder: FormBuilder,
     private router: Router,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    private reporteService: ReporteService // ✨ INYECTAR SERVICIO
   ) {
     this.initForm();
     // Actualizar la hora cada segundo
@@ -181,14 +91,18 @@ export class EditarReporteComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    // Cargar categorías primero
+    this.loadCategorias();
+    
     this.route.queryParams
       .pipe(takeUntil(this.destroy$))
       .subscribe(params => {
-        this.reporteId = params['id'] ? parseInt(params['id']) : null;
+        this.reporteId = params['id'] || null;
         if (this.reporteId) {
           this.loadReporte();
         } else {
-          this.router.navigate(['/reportes-propios']);
+          this.error = 'No se especificó un ID de reporte válido';
+          this.isLoading = false;
         }
       });
   }
@@ -210,65 +124,170 @@ export class EditarReporteComponent implements OnInit, OnDestroy {
     });
   }
 
+  // ✨ CARGAR CATEGORÍAS DEL BACKEND
+  private loadCategorias(): void {
+    console.log('📋 Cargando categorías del backend...');
+    
+    this.reporteService.getCategorias()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (categoriasBackend) => {
+          console.log('✅ Categorías cargadas:', categoriasBackend);
+          this.categoriasBackend = categoriasBackend;
+          
+          // Convertir a formato del frontend
+          this.categorias = categoriasBackend.map(cat => ({
+            value: cat.id,
+            label: cat.nombre,
+            icon: this.getIconoCategoria(cat.nombre),
+            color: this.getColorCategoria(cat.nombre)
+          }));
+        },
+        error: (error) => {
+          console.error('❌ Error cargando categorías:', error);
+          // Usar categorías por defecto si falla
+          this.categorias = [
+            { value: 'emergencia', label: 'Emergencia', icon: 'bi bi-exclamation-triangle-fill', color: '#ef4444' },
+            { value: 'seguridad', label: 'Seguridad', icon: 'bi bi-shield-exclamation', color: '#f59e0b' },
+            { value: 'infraestructura', label: 'Infraestructura', icon: 'bi bi-tools', color: '#3b82f6' },
+            { value: 'otros', label: 'Otros', icon: 'bi bi-chat-dots', color: '#6b7280' }
+          ];
+        }
+      });
+  }
+
+  // ✨ MÉTODO ACTUALIZADO PARA USAR BACKEND
   private loadReporte(): void {
+    if (!this.reporteId) {
+      this.error = 'ID de reporte no válido';
+      this.isLoading = false;
+      return;
+    }
+
     this.isLoading = true;
     this.error = null;
     
-    // Simular carga desde servidor
-    setTimeout(() => {
-      this.reporte = this.reportesData.find(r => r.id === this.reporteId) || null;
-      
-      if (!this.reporte) {
-        this.error = 'Reporte no encontrado';
-        this.isLoading = false;
-        return;
-      }
+    console.log('📄 Cargando reporte para editar:', this.reporteId);
+    
+    this.reporteService.obtenerDetalleReporte(this.reporteId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (miReporte) => {
+          console.log('✅ Reporte cargado para edición:', miReporte);
+          
+          // Solo permitir editar si está pendiente
+          if (miReporte.estado !== 'pendiente') {
+            this.error = 'Este reporte no puede ser editado porque ya ha sido procesado';
+            this.isLoading = false;
+            return;
+          }
 
-      // Solo permitir editar si está pendiente
-      if (this.reporte.estado !== 'pendiente') {
-        this.error = 'Este reporte no puede ser editado porque ya ha sido procesado';
-        this.isLoading = false;
-        return;
-      }
-
-      // Llenar el formulario con los datos existentes
-      this.editarForm.patchValue({
-        titulo: this.reporte.titulo,
-        descripcion: this.reporte.descripcion,
-        categoria: this.reporte.categoria,
-        prioridad: this.reporte.prioridad,
-        'ubicacion.direccion': this.reporte.ubicacion.direccion,
-        telefono: this.reporte.detallesAdicionales?.telefono || '',
-        email: this.reporte.detallesAdicionales?.email || ''
+          // Convertir a formato local
+          this.reporte = this.convertirMiReporteAEdicion(miReporte);
+          
+          // Llenar el formulario con los datos existentes
+          this.editarForm.patchValue({
+            titulo: this.reporte.titulo,
+            descripcion: this.reporte.descripcion,
+            categoria: this.reporte.categoria,
+            prioridad: this.reporte.prioridad,
+            'ubicacion.direccion': this.reporte.ubicacion.direccion,
+            telefono: this.reporte.detallesAdicionales?.telefono || '',
+            email: this.reporte.detallesAdicionales?.email || ''
+          });
+          
+          this.isLoading = false;
+        },
+        error: (error) => {
+          console.error('❌ Error cargando reporte para editar:', error);
+          this.error = error.message || 'Error al cargar el reporte';
+          this.isLoading = false;
+          
+          // Si es error de autenticación, redirigir al login
+          if (error.message.includes('sesión ha expirado') || error.message.includes('iniciar sesión')) {
+            setTimeout(() => {
+              this.router.navigate(['/login']);
+            }, 3000);
+          }
+        }
       });
-      
-      this.isLoading = false;
-    }, 1000);
   }
 
+  // ✨ CONVERTIR MiReporteDTO A FORMATO DE EDICIÓN
+  private convertirMiReporteAEdicion(miReporte: MiReporteDTO): ReporteEdicion {
+    return {
+      id: miReporte.id,
+      titulo: miReporte.titulo,
+      descripcion: miReporte.descripcion,
+      categoria: miReporte.categoria,
+      estado: ['pendiente', 'en_proceso', 'resuelto', 'rechazado', 'eliminado'].includes(miReporte.estado)
+        ? miReporte.estado as 'pendiente' | 'en_proceso' | 'resuelto' | 'rechazado' | 'eliminado'
+        : 'pendiente',
+      prioridad: miReporte.prioridad,
+      fechaCreacion: miReporte.fechaCreacion,
+      fechaActualizacion: miReporte.fechaActualizacion,
+      ubicacion: miReporte.ubicacion,
+      imagenes: miReporte.imagenes,
+      comentariosAdmin: miReporte.comentariosAdmin,
+      detallesAdicionales: {
+        telefono: undefined, // El backend no tiene estos campos por ahora
+        email: undefined,
+        testigos: [],
+        evidencias: []
+      }
+    };
+  }
+
+  // ✨ MÉTODO ACTUALIZADO PARA ENVIAR EDICIÓN AL BACKEND
   onSubmit(): void {
-    if (this.editarForm.valid && !this.isSaving) {
+    if (this.editarForm.valid && !this.isSaving && this.reporte) {
       this.isSaving = true;
       
       const formData = this.editarForm.value;
       
-      // Simular guardado
-      setTimeout(() => {
-        console.log('Reporte actualizado:', formData);
-        
-        // Mostrar notificación de éxito
-        this.showSuccessNotification = true;
-        
-        // Ocultar notificación después de 3 segundos y navegar
-        setTimeout(() => {
-          this.showSuccessNotification = false;
-          this.router.navigate(['/detalle-reporte'], { 
-            queryParams: { id: this.reporteId } 
-          });
-        }, 3000);
-        
-        this.isSaving = false;
-      }, 2000);
+      // Buscar el ID de la categoría seleccionada
+      const categoriaSeleccionada = this.categorias.find(cat => cat.value === formData.categoria);
+      const idCategoria = categoriaSeleccionada?.value || formData.categoria;
+      
+      // Preparar datos para el backend
+      const datosEdicion: EditarReporteDTO = {
+        titulo: formData.titulo,
+        descripcion: formData.descripcion,
+        idCategoria: idCategoria,
+        ubicacion: {
+          latitud: this.reporte.ubicacion.lat,
+          longitud: this.reporte.ubicacion.lng
+        }
+        // fotos: mantenemos las existentes por ahora
+      };
+      
+      console.log('💾 Enviando edición al backend:', datosEdicion);
+      
+      this.reporteService.editarReporte(this.reporte.id, datosEdicion)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: (mensaje) => {
+            console.log('✅ Reporte editado exitosamente:', mensaje);
+            
+            // Mostrar notificación de éxito
+            this.showSuccessNotification = true;
+            
+            // Ocultar notificación después de 3 segundos y navegar
+            setTimeout(() => {
+              this.showSuccessNotification = false;
+              this.router.navigate(['/detalle-reporte'], { 
+                queryParams: { id: this.reporteId } 
+              });
+            }, 3000);
+            
+            this.isSaving = false;
+          },
+          error: (error) => {
+            console.error('❌ Error editando reporte:', error);
+            alert('Error al guardar los cambios: ' + error.message);
+            this.isSaving = false;
+          }
+        });
     } else {
       // Marcar todos los campos como touched para mostrar errores
       Object.keys(this.editarForm.controls).forEach(key => {
@@ -288,7 +307,10 @@ export class EditarReporteComponent implements OnInit, OnDestroy {
   }
 
   cancelarEdicion(): void {
-    this.goBack();
+    const confirmacion = confirm('¿Estás seguro de que quieres cancelar la edición? Se perderán los cambios no guardados.');
+    if (confirmacion) {
+      this.goBack();
+    }
   }
 
   // Método para obtener ubicación actual (simulado)
@@ -297,10 +319,16 @@ export class EditarReporteComponent implements OnInit, OnDestroy {
       navigator.geolocation.getCurrentPosition(
         (position) => {
           // Simular conversión de coordenadas a dirección
-          const direccionSimulada = `Calle ${Math.floor(Math.random() * 100)} # ${Math.floor(Math.random() * 50)}-${Math.floor(Math.random() * 99)}, Bogotá`;
+          const direccionSimulada = `Lat: ${position.coords.latitude.toFixed(4)}, Lng: ${position.coords.longitude.toFixed(4)}`;
           this.editarForm.patchValue({
             'ubicacion.direccion': direccionSimulada
           });
+          
+          // Actualizar las coordenadas en el reporte
+          if (this.reporte) {
+            this.reporte.ubicacion.lat = position.coords.latitude;
+            this.reporte.ubicacion.lng = position.coords.longitude;
+          }
         },
         (error) => {
           console.error('Error obteniendo ubicación:', error);
@@ -337,6 +365,37 @@ export class EditarReporteComponent implements OnInit, OnDestroy {
   getPrioridadSeleccionada(): Prioridad | undefined {
     const prioridadValue = this.editarForm.get('prioridad')?.value;
     return this.prioridades.find(prio => prio.value === prioridadValue);
+  }
+
+  // ✨ MÉTODOS AUXILIARES PARA CATEGORÍAS
+  private getIconoCategoria(nombreCategoria: string): string {
+    const nombre = nombreCategoria.toLowerCase();
+    switch (nombre) {
+      case 'emergencia':
+        return 'bi bi-exclamation-triangle-fill';
+      case 'seguridad':
+        return 'bi bi-shield-exclamation';
+      case 'infraestructura':
+        return 'bi bi-tools';
+      case 'otros':
+      default:
+        return 'bi bi-chat-dots';
+    }
+  }
+
+  private getColorCategoria(nombreCategoria: string): string {
+    const nombre = nombreCategoria.toLowerCase();
+    switch (nombre) {
+      case 'emergencia':
+        return '#ef4444';
+      case 'seguridad':
+        return '#f59e0b';
+      case 'infraestructura':
+        return '#3b82f6';
+      case 'otros':
+      default:
+        return '#6b7280';
+    }
   }
 
   // Getter para el tiempo actual formateado

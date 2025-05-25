@@ -691,3 +691,287 @@
     padding-right: 1rem;
   }
 }
+
+/* Botón de refrescar con animación */
+.secondary-btn {
+  background: #f1f5f9;
+  color: #374151;
+  border: 1px solid #e2e8f0;
+}
+
+.secondary-btn:hover {
+  background: #e2e8f0;
+  color: #1f2937;
+}
+
+.secondary-btn[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+.secondary-btn[disabled]:hover {
+  transform: none !important;
+  background: #f1f5f9;
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+/* Contenedor de error */
+.error-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 400px;
+  padding: 2rem;
+  background: #f8fafc;
+}
+
+.error-content {
+  text-align: center;
+  color: #ef4444;
+  max-width: 500px;
+  background: white;
+  padding: 2rem;
+  border-radius: 1rem;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.1);
+  border: 1px solid #fee2e2;
+}
+
+.error-content i {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  color: #ef4444;
+}
+
+.error-content h3 {
+  color: #dc2626;
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+  font-weight: 700;
+}
+
+.error-content p {
+  color: #991b1b;
+  margin-bottom: 1.5rem;
+  line-height: 1.5;
+}
+
+/* Contenedor de imágenes en la card */
+.reporte-imagenes {
+  margin-top: 1rem;
+  padding: 0.75rem;
+  background: #ecfdf5;
+  border-radius: 0.5rem;
+  border: 1px solid #bbf7d0;
+}
+
+.imagenes-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  color: #059669;
+  font-weight: 600;
+}
+
+.imagenes-header i {
+  color: #10b981;
+}
+
+/* Estado eliminado */
+.estado-eliminado {
+  background: #f3f4f6;
+  color: #4b5563;
+}
+
+/* Mejoras para el badge "MI REPORTE" */
+.mi-reporte-badge {
+  animation: pulse-green 2s infinite;
+}
+
+@keyframes pulse-green {
+  0%, 100% {
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+  }
+  50% {
+    box-shadow: 0 4px 16px rgba(16, 185, 129, 0.5);
+  }
+}
+
+/* Mejorar estilos de botones para el tema verde */
+.primary-btn {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+}
+
+.primary-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+}
+
+/* Botón de resolver específico */
+.btn-resolver {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+  border: none;
+}
+
+.btn-resolver:hover {
+  background: linear-gradient(135deg, #059669, #047857);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+}
+
+/* Información de acción mejorada */
+.action-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #6b7280;
+  font-size: 0.85rem;
+  padding: 0.75rem;
+  background: #f8fafc;
+  border-radius: 0.5rem;
+  flex: 1;
+  border-left: 3px solid #e5e7eb;
+}
+
+.action-info i {
+  color: #10b981;
+}
+
+/* Variaciones de action-info por estado */
+.reporte-card:has(.estado-resuelto) .action-info {
+  background: #ecfdf5;
+  border-left-color: #10b981;
+  color: #059669;
+}
+
+.reporte-card:has(.estado-rechazado) .action-info {
+  background: #fef2f2;
+  border-left-color: #ef4444;
+  color: #dc2626;
+}
+
+.reporte-card:has(.estado-eliminado) .action-info {
+  background: #f9fafb;
+  border-left-color: #6b7280;
+  color: #4b5563;
+}
+
+.reporte-card:has(.estado-proceso) .action-info {
+  background: #f0f9ff;
+  border-left-color: #3b82f6;
+  color: #1d4ed8;
+}
+
+/* Hover effects mejorados para reportes propios */
+.reporte-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 30px rgba(16, 185, 129, 0.15);
+}
+
+.reporte-card:hover .mi-reporte-badge {
+  transform: scale(1.05);
+}
+
+/* Responsive específico para mis reportes */
+@media (max-width: 768px) {
+  .header-right {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .action-info {
+    font-size: 0.8rem;
+    padding: 0.5rem;
+  }
+  
+  .mi-reporte-badge {
+    font-size: 0.7rem;
+    padding: 0.25rem 0.6rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .mi-reporte-badge {
+    position: relative;
+    top: 0;
+    right: 0;
+    margin-bottom: 0.5rem;
+    width: fit-content;
+  }
+  
+  .reporte-header {
+    margin-top: 0;
+  }
+  
+  .reporte-actions {
+    gap: 0.5rem;
+  }
+  
+  .action-info {
+    font-size: 0.75rem;
+    padding: 0.4rem;
+  }
+}
+
+/* Indicador visual para reportes que se pueden resolver */
+.reporte-card:has(.estado-proceso) {
+  border-left: 4px solid #10b981;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.02), rgba(5, 150, 105, 0.02));
+}
+
+.reporte-card:has(.estado-proceso):hover {
+  border-left-color: #059669;
+}
+
+/* Estilo especial para reportes resueltos */
+.reporte-card:has(.estado-resuelto) {
+  opacity: 0.9;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.05), rgba(5, 150, 105, 0.05));
+}
+
+.reporte-card:has(.estado-resuelto) .reporte-titulo {
+  color: #059669;
+}
+
+/* Estilo especial para reportes rechazados */
+.reporte-card:has(.estado-rechazado) {
+  opacity: 0.8;
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.03), rgba(220, 38, 38, 0.03));
+}
+
+.reporte-card:has(.estado-rechazado) .reporte-titulo {
+  color: #dc2626;
+  text-decoration: line-through;
+}
+
+/* Animación para spinner */
+@keyframes spin {
+  0% { 
+    transform: rotate(0deg); 
+  }
+  100% { 
+    transform: rotate(360deg); 
+  }
+}
+
+/* Mejoras para dispositivos táctiles */
+@media (hover: none) and (pointer: coarse) {
+  .reporte-card:hover {
+    transform: none;
+  }
+  
+  .reporte-card:active {
+    transform: scale(0.98);
+  }
+  
+  .btn:active {
+    transform: scale(0.95);
+  }
+}

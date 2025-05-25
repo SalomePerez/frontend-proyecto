@@ -4,13 +4,16 @@ import { Router } from '@angular/router';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 
-// Interface del reporte
+// ✨ IMPORTAR SERVICIO Y INTERFACES
+import { ReporteService, MiReporteDTO, EstadisticasReportes } from '../../servicios/reporte.service';
+
+// Interface del reporte (mantener para compatibilidad local)
 interface Reporte {
-  id: number;
+  id: string; // ✨ CAMBIAR A STRING para compatibilidad con backend
   titulo: string;
   descripcion: string;
   categoria: 'emergencia' | 'seguridad' | 'infraestructura' | 'otros';
-  estado: 'pendiente' | 'en_proceso' | 'resuelto' | 'rechazado';
+  estado: 'pendiente' | 'en_proceso' | 'resuelto' | 'rechazado' | 'eliminado';
   prioridad: 'baja' | 'media' | 'alta' | 'critica';
   fechaCreacion: string;
   fechaActualizacion: string;
@@ -42,7 +45,11 @@ export class ReportesPropiosComponent implements OnInit, OnDestroy {
   selectedCategory: string = 'todas';
   searchTerm: string = '';
   
-  // Datos de reportes
+  // ✨ MANEJO DE ERRORES
+  errorMessage: string = '';
+  hasError: boolean = false;
+  
+  // ✨ DATOS DE REPORTES (INTEGRADOS CON BACKEND)
   reportesPropios: Reporte[] = [];
   reportesFiltrados: Reporte[] = [];
   
@@ -57,7 +64,10 @@ export class ReportesPropiosComponent implements OnInit, OnDestroy {
 
   private destroy$ = new Subject<void>();
 
-  constructor(private router: Router) {
+  constructor(
+    private router: Router,
+    private reporteService: ReporteService // ✨ INYECTAR SERVICIO
+  ) {
     this.loadUserData();
   }
 
@@ -84,103 +94,67 @@ export class ReportesPropiosComponent implements OnInit, OnDestroy {
     }
   }
 
+  // ✨ MÉTODO ACTUALIZADO PARA USAR EL BACKEND
   private loadReportesPropios(): void {
     this.isLoading = true;
+    this.hasError = false;
+    this.errorMessage = '';
     
-    // Simular carga de datos SOLO de reportes del usuario actual
-    setTimeout(() => {
-      this.reportesPropios = [
-        {
-          id: 1,
-          titulo: 'Robo en mi cuadra',
-          descripcion: 'Vi un robo a mano armada en la calle 45 con carrera 12. Los delincuentes se movilizaban en motocicleta negra.',
-          categoria: 'seguridad',
-          estado: 'en_proceso',
-          prioridad: 'alta',
-          fechaCreacion: '2024-01-15T10:30:00',
-          fechaActualizacion: '2024-01-16T14:20:00',
-          ubicacion: {
-            direccion: 'Calle 45 # 12-34, Bogotá',
-            lat: 4.6097,
-            lng: -74.0817
-          },
-          imagenes: ['assets/reporte1.jpg'],
-          comentariosAdmin: 'Se ha enviado patrulla al área. Caso bajo investigación.',
-          esPropio: true
+    console.log('📋 Cargando mis reportes creados...');
+    
+    this.reporteService.obtenerMisReportes()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (misReportes) => {
+          console.log('✅ Mis reportes cargados exitosamente:', misReportes.length);
+          
+          // Convertir de MiReporteDTO a formato local del componente
+          this.reportesPropios = misReportes.map(reporte => this.convertirMiReporteALocal(reporte));
+          
+          this.calcularEstadisticas();
+          this.aplicarFiltros();
+          this.isLoading = false;
         },
-        {
-          id: 4,
-          titulo: 'Ruido excesivo del bar',
-          descripcion: 'El bar de mi cuadra tiene música muy alta todas las noches después de las 11 PM, violando las normas de ruido.',
-          categoria: 'otros',
-          estado: 'pendiente',
-          prioridad: 'baja',
-          fechaCreacion: '2024-01-16T22:30:00',
-          fechaActualizacion: '2024-01-16T22:30:00',
-          ubicacion: {
-            direccion: 'Calle 85 # 15-20, Bogotá',
-            lat: 4.6097,
-            lng: -74.0817
-          },
-          esPropio: true
-        },
-        {
-          id: 8,
-          titulo: 'Hueco peligroso en la vía',
-          descripcion: 'Hay un hueco muy grande en la carrera 15 que está causando accidentes de motocicletas.',
-          categoria: 'infraestructura',
-          estado: 'pendiente',
-          prioridad: 'media',
-          fechaCreacion: '2024-01-17T08:15:00',
-          fechaActualizacion: '2024-01-17T08:15:00',
-          ubicacion: {
-            direccion: 'Carrera 15 # 34-45, Bogotá',
-            lat: 4.6097,
-            lng: -74.0817
-          },
-          esPropio: true
-        },
-        {
-          id: 12,
-          titulo: 'Peligro: Cables eléctricos sueltos',
-          descripcion: 'Cables de alta tensión colgando peligrosamente sobre la calle después de la tormenta de ayer.',
-          categoria: 'emergencia',
-          estado: 'resuelto',
-          prioridad: 'critica',
-          fechaCreacion: '2024-01-10T15:45:00',
-          fechaActualizacion: '2024-01-11T09:30:00',
-          ubicacion: {
-            direccion: 'Avenida 68 # 45-12, Bogotá',
-            lat: 4.6097,
-            lng: -74.0817
-          },
-          comentariosAdmin: 'Cuadrilla de la empresa eléctrica reparó los cables. Peligro neutralizado.',
-          esPropio: true
-        },
-        {
-          id: 15,
-          titulo: 'Intento de robo a mi vehículo',
-          descripcion: 'Intentaron robar mi carro en el parqueadero del supermercado. Los ladrones huyeron cuando llegué.',
-          categoria: 'seguridad',
-          estado: 'rechazado',
-          prioridad: 'alta',
-          fechaCreacion: '2024-01-09T19:20:00',
-          fechaActualizacion: '2024-01-12T11:15:00',
-          ubicacion: {
-            direccion: 'Centro Comercial Andino, Bogotá',
-            lat: 4.6097,
-            lng: -74.0817
-          },
-          comentariosAdmin: 'No se encontró evidencia suficiente para proceder. Se recomienda instalar cámaras.',
-          esPropio: true
+        error: (error) => {
+          console.error('❌ Error cargando mis reportes:', error);
+          this.hasError = true;
+          this.errorMessage = error.message || 'Error al cargar tus reportes';
+          this.isLoading = false;
+          
+          // Si es error de autenticación, redirigir al login
+          if (error.message.includes('sesión ha expirado') || error.message.includes('iniciar sesión')) {
+            setTimeout(() => {
+              this.router.navigate(['/login']);
+            }, 3000);
+          }
         }
-      ];
-      
-      console.log('Mis reportes cargados:', this.reportesPropios.length);
-      this.calcularEstadisticas();
-      this.aplicarFiltros();
-      this.isLoading = false;
-    }, 1200);
+      });
+  }
+
+  // ✨ CONVERTIR MiReporteDTO A FORMATO LOCAL
+  private convertirMiReporteALocal(miReporte: MiReporteDTO): Reporte {
+    return {
+      id: miReporte.id,
+      titulo: miReporte.titulo,
+      descripcion: miReporte.descripcion,
+      categoria: miReporte.categoria as 'emergencia' | 'seguridad' | 'infraestructura' | 'otros',
+      estado: ['pendiente', 'en_proceso', 'resuelto', 'rechazado', 'eliminado'].includes(miReporte.estado)
+        ? miReporte.estado as 'pendiente' | 'en_proceso' | 'resuelto' | 'rechazado' | 'eliminado'
+        : 'pendiente',
+      prioridad: miReporte.prioridad,
+      fechaCreacion: miReporte.fechaCreacion,
+      fechaActualizacion: miReporte.fechaActualizacion,
+      ubicacion: miReporte.ubicacion,
+      imagenes: miReporte.imagenes,
+      comentariosAdmin: miReporte.comentariosAdmin,
+      esPropio: true // Siempre true ya que son mis reportes
+    };
+  }
+
+  // ✨ REFRESCAR REPORTES
+  refrescarReportes(): void {
+    console.log('🔄 Refrescando mis reportes...');
+    this.loadReportesPropios();
   }
 
   private calcularEstadisticas(): void {
@@ -193,7 +167,7 @@ export class ReportesPropiosComponent implements OnInit, OnDestroy {
     };
   }
 
-  // Métodos de filtrado
+  // Métodos de filtrado (mantener existentes)
   onFilterChange(event: Event): void {
     const target = event.target as HTMLSelectElement;
     this.selectedFilter = target.value;
@@ -252,16 +226,89 @@ export class ReportesPropiosComponent implements OnInit, OnDestroy {
   }
 
   // ✅ MÉTODO CLAVE: Navegar al detalle usando el componente existente
-  verDetalleReporte(reporteId: number): void {
+  verDetalleReporte(reporteId: string): void { // ✨ CAMBIAR TIPO A STRING
     this.router.navigate(['/detalle-reporte'], { queryParams: { id: reporteId } });
   }
 
-  editarReporte(reporteId: number): void {
-    console.log('🔧 Navegando a editar reporte ID:', reporteId);
+  // ✨ MÉTODO ACTUALIZADO PARA EDITAR CON BACKEND
+  editarReporte(reporteId: string): void { // ✨ CAMBIAR TIPO A STRING
+    console.log('🔧 Editando reporte ID:', reporteId);
+    
+    const reporte = this.reportesPropios.find(r => r.id === reporteId);
+    if (!reporte) {
+      console.error('Reporte no encontrado');
+      return;
+    }
+
+    if (reporte.estado !== 'pendiente') {
+      alert('Solo puedes editar reportes en estado pendiente');
+      return;
+    }
+
     this.router.navigate(['/editar-reporte'], { queryParams: { id: reporteId } });
   }
 
-  // Métodos de utilidad
+  // ✨ MÉTODO ACTUALIZADO PARA ELIMINAR CON BACKEND
+  eliminarReporte(reporteId: string): void { // ✨ CAMBIAR TIPO A STRING
+    const reporte = this.reportesPropios.find(r => r.id === reporteId);
+    if (!reporte) {
+      console.error('Reporte no encontrado');
+      return;
+    }
+
+    if (reporte.estado !== 'pendiente') {
+      alert('Solo puedes eliminar reportes que estén pendientes.');
+      return;
+    }
+
+    const confirmacion = confirm(`¿Estás seguro de que quieres eliminar el reporte "${reporte.titulo}"?`);
+    if (!confirmacion) {
+      return;
+    }
+
+    console.log('🗑️ Eliminando reporte:', reporteId);
+    
+    this.reporteService.eliminarReporte(reporteId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          console.log('✅ Reporte eliminado exitosamente');
+          alert('Reporte eliminado exitosamente');
+          this.refrescarReportes(); // Recargar la lista
+        },
+        error: (error) => {
+          console.error('❌ Error eliminando reporte:', error);
+          alert('Error al eliminar el reporte: ' + error.message);
+        }
+      });
+  }
+
+  // ✨ MÉTODO PARA MARCAR COMO RESUELTO
+  marcarComoResuelto(reporteId: string): void {
+    const reporte = this.reportesPropios.find(r => r.id === reporteId);
+    if (!reporte) {
+      console.error('Reporte no encontrado');
+      return;
+    }
+
+    if (reporte.estado !== 'en_proceso') {
+      alert('Solo puedes marcar como resuelto reportes que estén en proceso');
+      return;
+    }
+
+    const confirmacion = confirm(`¿Confirmas que el reporte "${reporte.titulo}" ha sido resuelto?`);
+    if (!confirmacion) {
+      return;
+    }
+
+    // Implementar la llamada al servicio cuando esté disponible
+    // this.reporteService.cambiarEstadoReporte(reporteId, 'resuelto')...
+    
+    console.log('✅ Marcando reporte como resuelto:', reporteId);
+    alert('Funcionalidad de marcar como resuelto se implementará próximamente');
+  }
+
+  // Métodos de utilidad (mantener existentes)
   getCategoriaIcon(categoria: string): string {
     switch (categoria) {
       case 'emergencia':
@@ -302,6 +349,8 @@ export class ReportesPropiosComponent implements OnInit, OnDestroy {
         return 'estado-resuelto';
       case 'rechazado':
         return 'estado-rechazado';
+      case 'eliminado': // ✨ AGREGAR ELIMINADO
+        return 'estado-eliminado';
       default:
         return 'estado-pendiente';
     }
@@ -317,6 +366,8 @@ export class ReportesPropiosComponent implements OnInit, OnDestroy {
         return 'Resuelto';
       case 'rechazado':
         return 'Rechazado';
+      case 'eliminado': // ✨ AGREGAR ELIMINADO
+        return 'Eliminado';
       default:
         return 'Desconocido';
     }
@@ -338,47 +389,43 @@ export class ReportesPropiosComponent implements OnInit, OnDestroy {
   }
 
   formatFecha(fecha: string): string {
-    const date = new Date(fecha);
-    return date.toLocaleDateString('es-CO', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  }
-
-  getTiempoTranscurrido(fecha: string): string {
-    const ahora = new Date();
-    const fechaReporte = new Date(fecha);
-    const diferencia = ahora.getTime() - fechaReporte.getTime();
-    
-    const minutos = Math.floor(diferencia / (1000 * 60));
-    const horas = Math.floor(diferencia / (1000 * 60 * 60));
-    const dias = Math.floor(diferencia / (1000 * 60 * 60 * 24));
-    
-    if (dias > 0) {
-      return `Hace ${dias} día${dias > 1 ? 's' : ''}`;
-    } else if (horas > 0) {
-      return `Hace ${horas} hora${horas > 1 ? 's' : ''}`;
-    } else if (minutos > 0) {
-      return `Hace ${minutos} minuto${minutos > 1 ? 's' : ''}`;
-    } else {
-      return 'Hace un momento';
+    try {
+      const date = new Date(fecha);
+      return date.toLocaleDateString('es-CO', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (error) {
+      console.error('Error formateando fecha:', error);
+      return 'Fecha no disponible';
     }
   }
 
-  // Método para eliminar reporte (solo si está pendiente)
-  eliminarReporte(reporteId: number): void {
-    const reporte = this.reportesPropios.find(r => r.id === reporteId);
-    if (reporte && reporte.estado === 'pendiente') {
-      if (confirm('¿Estás seguro de que quieres eliminar este reporte?')) {
-        this.reportesPropios = this.reportesPropios.filter(r => r.id !== reporteId);
-        this.calcularEstadisticas();
-        this.aplicarFiltros();
+  getTiempoTranscurrido(fecha: string): string {
+    try {
+      const ahora = new Date();
+      const fechaReporte = new Date(fecha);
+      const diferencia = ahora.getTime() - fechaReporte.getTime();
+      
+      const minutos = Math.floor(diferencia / (1000 * 60));
+      const horas = Math.floor(diferencia / (1000 * 60 * 60));
+      const dias = Math.floor(diferencia / (1000 * 60 * 60 * 24));
+      
+      if (dias > 0) {
+        return `Hace ${dias} día${dias > 1 ? 's' : ''}`;
+      } else if (horas > 0) {
+        return `Hace ${horas} hora${horas > 1 ? 's' : ''}`;
+      } else if (minutos > 0) {
+        return `Hace ${minutos} minuto${minutos > 1 ? 's' : ''}`;
+      } else {
+        return 'Hace un momento';
       }
-    } else {
-      alert('Solo puedes eliminar reportes que estén pendientes.');
+    } catch (error) {
+      console.error('Error calculando tiempo transcurrido:', error);
+      return 'Tiempo no disponible';
     }
   }
 }

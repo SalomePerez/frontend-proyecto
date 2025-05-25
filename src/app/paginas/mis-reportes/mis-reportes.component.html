@@ -6,8 +6,8 @@
         <i class="bi bi-arrow-left"></i>
       </button>
       <div class="page-title-section">
-        <h1 class="page-title">Mis Reportes</h1>
-        <p class="page-subtitle">Administra y supervisa tus reportes de seguridad</p>
+        <h1 class="page-title">Reportes Zona</h1>
+        <p class="page-subtitle">Explora y comenta reportes de seguridad en tu área</p>
       </div>
     </div>
     <div class="header-right">
@@ -15,19 +15,38 @@
         <i class="bi bi-plus-circle"></i>
         <span>Nuevo Reporte</span>
       </button>
+      <!-- ✨ BOTÓN PARA REFRESCAR -->
+      <button class="btn secondary-btn" (click)="refrescarReportes()" [disabled]="isLoading" title="Refrescar zona">
+        <i class="bi bi-arrow-clockwise" [class.spin]="isLoading"></i>
+        <span *ngIf="!isLoading">Refrescar</span>
+        <span *ngIf="isLoading">Cargando...</span>
+      </button>
     </div>
   </header>
 
+  <!-- ✨ MENSAJE DE ERROR -->
+  <div class="error-container" *ngIf="hasError && !isLoading">
+    <div class="error-content">
+      <i class="bi bi-exclamation-triangle"></i>
+      <h3>Error al cargar reportes de la zona</h3>
+      <p>{{ errorMessage }}</p>
+      <button class="btn primary-btn" (click)="refrescarReportes()">
+        <i class="bi bi-arrow-clockwise"></i>
+        Reintentar
+      </button>
+    </div>
+  </div>
+
   <!-- Estadísticas -->
-  <section class="estadisticas-section">
+  <section class="estadisticas-section" *ngIf="!hasError">
     <div class="estadisticas-grid">
       <div class="estadistica-card total">
         <div class="estadistica-icon">
-          <i class="bi bi-files"></i>
+          <i class="bi bi-geo-alt"></i>
         </div>
         <div class="estadistica-info">
           <h3>{{ estadisticas.total }}</h3>
-          <p>Total de Reportes</p>
+          <p>Reportes en la Zona</p>
         </div>
       </div>
       
@@ -64,7 +83,7 @@
   </section>
 
   <!-- Filtros y búsqueda -->
-  <section class="filtros-section">
+  <section class="filtros-section" *ngIf="!hasError">
     <div class="filtros-container">
       <div class="filtros-left">
         <div class="filtro-grupo">
@@ -96,7 +115,7 @@
           <input 
             type="text" 
             class="busqueda-input" 
-            placeholder="Buscar reportes por título, descripción o ubicación..."
+            placeholder="Buscar por título, descripción, ubicación o usuario..."
             [value]="searchTerm"
             (input)="onSearchChange($event)"
           >
@@ -111,24 +130,24 @@
     <div class="loading-container" *ngIf="isLoading">
       <div class="loading-content">
         <div class="spinner"></div>
-        <p>Cargando tus reportes...</p>
+        <p>Cargando reportes de la zona...</p>
       </div>
     </div>
 
     <!-- Lista de reportes -->
-    <div class="reportes-grid" *ngIf="!isLoading">
+    <div class="reportes-grid" *ngIf="!isLoading && !hasError">
       <!-- Mensaje si no hay reportes -->
       <div class="no-reportes-message" *ngIf="reportesFiltrados.length === 0">
         <div class="no-reportes-content">
-          <i class="bi bi-inbox"></i>
-          <h3>No se encontraron reportes</h3>
-          <p *ngIf="selectedFilter === 'todos' && !searchTerm">
-            Aún no has creado ningún reporte. ¡Crea tu primer reporte ahora!
+          <i class="bi bi-geo"></i>
+          <h3>No se encontraron reportes en la zona</h3>
+          <p *ngIf="selectedFilter === 'todos' && !searchTerm && reportes.length === 0">
+            No hay reportes en tu área cercana. ¡Sé el primero en reportar algo!
           </p>
-          <p *ngIf="selectedFilter !== 'todos' || searchTerm">
+          <p *ngIf="selectedFilter !== 'todos' || searchTerm || reportes.length > 0">
             No hay reportes que coincidan con los filtros seleccionados.
           </p>
-          <button class="btn primary-btn" (click)="crearNuevoReporte()" *ngIf="selectedFilter === 'todos' && !searchTerm">
+          <button class="btn primary-btn" (click)="crearNuevoReporte()" *ngIf="selectedFilter === 'todos' && !searchTerm && reportes.length === 0">
             <i class="bi bi-plus-circle"></i>
             Crear Primer Reporte
           </button>
@@ -136,7 +155,11 @@
       </div>
 
       <!-- Cards de reportes -->
-      <div class="reporte-card" *ngFor="let reporte of reportesFiltrados">
+      <div class="reporte-card" 
+           *ngFor="let reporte of reportesFiltrados" 
+           [class.reporte-propio]="reporte.esPropio"
+           [class.reporte-ajeno]="!reporte.esPropio">
+        
         <div class="reporte-header">
           <div class="reporte-categoria">
             <i [class]="getCategoriaIcon(reporte.categoria)" [style.color]="getCategoriaColor(reporte.categoria)"></i>
@@ -148,6 +171,18 @@
         </div>
 
         <div class="reporte-body">
+          <!-- ✨ INDICADOR DE REPORTE PROPIO -->
+          <div class="reporte-autor" *ngIf="reporte.esPropio">
+            <i class="bi bi-person-check"></i>
+            <span class="autor-badge">Tu reporte</span>
+          </div>
+          
+          <!-- ✨ NOMBRE DEL USUARIO (PARA REPORTES DE OTROS) -->
+          <div class="reporte-autor" *ngIf="!reporte.esPropio">
+            <i class="bi bi-person" [class.bi-person-fill-slash]="reporte.esAnonimo"></i>
+            <span class="autor-nombre">{{ reporte.nombreUsuario }}</span>
+          </div>
+
           <h3 class="reporte-titulo">{{ reporte.titulo }}</h3>
           <p class="reporte-descripcion">{{ reporte.descripcion }}</p>
           
@@ -169,30 +204,110 @@
               <i class="bi bi-flag"></i>
               <span>{{ reporte.prioridad | titlecase }}</span>
             </div>
+            <!-- ✨ CONTADOR DE IMPORTANCIA -->
+            <div class="meta-item importancia" *ngIf="reporte.contadorImportante && reporte.contadorImportante > 0">
+              <i class="bi bi-star-fill"></i>
+              <span>{{ reporte.contadorImportante }} importante{{ reporte.contadorImportante > 1 ? 's' : '' }}</span>
+            </div>
           </div>
 
-          <!-- Comentarios del admin si existen -->
-          <div class="admin-comentarios" *ngIf="reporte.comentariosAdmin">
-            <div class="comentarios-header">
-              <i class="bi bi-chat-text"></i>
-              <span>Comentarios del administrador:</span>
+          <!-- ✨ MOSTRAR IMÁGENES SI EXISTEN -->
+          <div class="reporte-imagenes" *ngIf="reporte.imagenes && reporte.imagenes.length > 0">
+            <div class="imagenes-header">
+              <i class="bi bi-images"></i>
+              <span>{{ reporte.imagenes.length }} imagen{{ reporte.imagenes.length > 1 ? 'es' : '' }}</span>
             </div>
-            <p>{{ reporte.comentariosAdmin }}</p>
+          </div>
+
+          <!-- ✨ SECCIÓN DE COMENTARIOS -->
+          <div class="comentarios-section" *ngIf="puedeComentarReporte(reporte) || reporte.esPropio">
+            
+            <!-- Botón para mostrar/ocultar comentarios -->
+            <div class="comentarios-toggle">
+              <button class="btn-comentarios" (click)="toggleComentarios(reporte.id)">
+                <i class="bi bi-chat-dots"></i>
+                <span>
+                  {{ mostrandoComentarios[reporte.id] ? 'Ocultar' : 'Ver' }} 
+                  comentarios ({{ getNumeroComentarios(reporte.id) }})
+                </span>
+                <i class="bi" [class.bi-chevron-down]="!mostrandoComentarios[reporte.id]" 
+                   [class.bi-chevron-up]="mostrandoComentarios[reporte.id]"></i>
+              </button>
+            </div>
+
+            <!-- Lista de comentarios -->
+            <div class="comentarios-lista" *ngIf="mostrandoComentarios[reporte.id]">
+              
+              <!-- Comentarios existentes -->
+              <div class="comentario-item" *ngFor="let comentario of comentariosReporte[reporte.id]">
+                <div class="comentario-autor">
+                  <i class="bi bi-person-circle"></i>
+                  <span>Usuario</span>
+                  <small class="comentario-fecha">{{ formatFecha(comentario.fecha) }}</small>
+                </div>
+                <p class="comentario-contenido">{{ comentario.contenido }}</p>
+              </div>
+
+              <!-- Sin comentarios -->
+              <div class="sin-comentarios" *ngIf="(!comentariosReporte[reporte.id] || comentariosReporte[reporte.id].length === 0)">
+                <i class="bi bi-chat"></i>
+                <p>No hay comentarios aún. ¡Sé el primero en comentar!</p>
+              </div>
+
+              <!-- ✨ AGREGAR NUEVO COMENTARIO (solo para reportes de otros) -->
+              <div class="nuevo-comentario" *ngIf="!reporte.esPropio">
+                <div class="comentario-input-container">
+                  <textarea 
+                    class="comentario-input"
+                    placeholder="Escribe tu comentario sobre este reporte..."
+                    [(ngModel)]="nuevoComentario[reporte.id]"
+                    rows="3"
+                    maxlength="500">
+                  </textarea>
+                  <div class="comentario-actions">
+                    <small class="caracteres-restantes">
+                      {{ 500 - (nuevoComentario[reporte.id].length || 0) }} caracteres restantes
+                    </small>
+                    <button 
+                      class="btn primary-btn btn-sm"
+                      (click)="agregarComentario(reporte.id)"
+                      [disabled]="!nuevoComentario[reporte.id].trim() || enviandoComentario[reporte.id]">
+                      <i class="bi bi-send" *ngIf="!enviandoComentario[reporte.id]"></i>
+                      <i class="bi bi-hourglass-split spin" *ngIf="enviandoComentario[reporte.id]"></i>
+                      <span>{{ enviandoComentario[reporte.id] ? 'Enviando...' : 'Comentar' }}</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
+        <!-- ✨ ACCIONES DIFERENCIADAS -->
         <div class="reporte-actions">
           <button class="btn secondary-btn" (click)="verDetalles(reporte.id)">
             <i class="bi bi-eye"></i>
             Ver Detalles
           </button>
+          
+          <!-- ✨ ACCIONES PARA REPORTES PROPIOS -->
           <button   
             class="btn outline-btn" 
             (click)="editarReporte(reporte.id)"
-            *ngIf="reporte.estado === 'pendiente'"
-          >
+            *ngIf="reporte.esPropio && reporte.estado === 'pendiente'"
+            title="Editar mi reporte">
             <i class="bi bi-pencil"></i>
             Editar
+          </button>
+
+          <!-- ✨ MARCAR COMO IMPORTANTE (CUALQUIER REPORTE) -->
+          <button 
+            class="btn importance-btn"
+            (click)="marcarComoImportante(reporte.id)"
+            title="Marcar como importante"
+            [class.marked]="reporte.contadorImportante && reporte.contadorImportante > 0">
+            <i class="bi bi-star" [class.bi-star-fill]="reporte.contadorImportante && reporte.contadorImportante > 0"></i>
+            <span>Importante</span>
           </button>
         </div>
       </div>

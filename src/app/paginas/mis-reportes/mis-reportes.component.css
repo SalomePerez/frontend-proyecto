@@ -637,3 +637,345 @@
     padding-right: 1rem;
   }
 }
+
+/* Diferenciación visual entre reportes propios y ajenos */
+.reporte-propio {
+  border-left: 4px solid #3F5AF5;
+  background: linear-gradient(135deg, rgba(63, 90, 245, 0.02), rgba(79, 70, 229, 0.02));
+}
+
+.reporte-ajeno {
+  border-left: 4px solid #6b7280;
+}
+
+.reporte-ajeno:hover {
+  border-left-color: #3F5AF5;
+}
+
+/* Autor del reporte */
+.reporte-autor {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  font-size: 0.85rem;
+}
+
+.autor-badge {
+  background: #3F5AF5;
+  color: white;
+  padding: 0.25rem 0.5rem;
+  border-radius: 1rem;
+  font-weight: 600;
+  font-size: 0.75rem;
+}
+
+.autor-nombre {
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.autor-nombre::before {
+  content: "Por ";
+}
+
+/* Sección de comentarios */
+.comentarios-section {
+  margin-top: 1rem;
+  border-top: 1px solid #e5e7eb;
+  padding-top: 1rem;
+}
+
+.comentarios-toggle {
+  margin-bottom: 0.75rem;
+}
+
+.btn-comentarios {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.5rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  color: #374151;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-comentarios:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.btn-comentarios i:last-child {
+  margin-left: auto;
+}
+
+/* Lista de comentarios */
+.comentarios-lista {
+  max-height: 400px;
+  overflow-y: auto;
+  background: #f8fafc;
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+}
+
+.comentario-item {
+  background: white;
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+  margin-bottom: 0.5rem;
+  border: 1px solid #e5e7eb;
+}
+
+.comentario-item:last-child {
+  margin-bottom: 0;
+}
+
+.comentario-autor {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+
+.comentario-fecha {
+  margin-left: auto;
+  font-size: 0.75rem;
+  color: #9ca3af;
+}
+
+.comentario-contenido {
+  color: #374151;
+  line-height: 1.4;
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+/* Sin comentarios */
+.sin-comentarios {
+  text-align: center;
+  color: #9ca3af;
+  padding: 1rem;
+}
+
+.sin-comentarios i {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+  display: block;
+}
+
+.sin-comentarios p {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+/* Nuevo comentario */
+.nuevo-comentario {
+  border-top: 1px solid #e5e7eb;
+  padding-top: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.comentario-input-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.comentario-input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 2px solid #e5e7eb;
+  border-radius: 0.5rem;
+  font-size: 0.9rem;
+  color: #374151;
+  background: white;
+  resize: vertical;
+  min-height: 80px;
+  font-family: inherit;
+  transition: border-color 0.3s ease;
+}
+
+.comentario-input:focus {
+  outline: none;
+  border-color: #3F5AF5;
+  box-shadow: 0 0 0 3px rgba(63, 90, 245, 0.1);
+}
+
+.comentario-input::placeholder {
+  color: #9ca3af;
+}
+
+.comentario-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.caracteres-restantes {
+  color: #6b7280;
+  font-size: 0.75rem;
+}
+
+.btn-sm {
+  padding: 0.5rem 1rem;
+  font-size: 0.8rem;
+}
+
+/* Botón de importancia */
+.importance-btn {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fde68a;
+}
+
+.importance-btn:hover {
+  background: #fde68a;
+  color: #78350f;
+}
+
+.importance-btn.marked {
+  background: #f59e0b;
+  color: white;
+  border-color: #d97706;
+}
+
+.importance-btn.marked:hover {
+  background: #d97706;
+}
+
+/* Meta item para importancia */
+.meta-item.importancia {
+  background: #fef3c7;
+  padding: 0.3rem 0.6rem;
+  border-radius: 0.4rem;
+  color: #92400e;
+  font-weight: 600;
+}
+
+/* Estado eliminado */
+.estado-eliminado {
+  background: #f3f4f6;
+  color: #4b5563;
+}
+
+/* Animación de spin mejorada */
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+/* Scrollbar personalizado para comentarios */
+.comentarios-lista::-webkit-scrollbar {
+  width: 6px;
+}
+
+.comentarios-lista::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 3px;
+}
+
+.comentarios-lista::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+.comentarios-lista::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Efectos de hover mejorados para cards */
+.reporte-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
+}
+
+.reporte-propio:hover {
+  box-shadow: 0 12px 30px rgba(63, 90, 245, 0.2);
+}
+
+/* Responsive para comentarios */
+@media (max-width: 768px) {
+  .comentarios-lista {
+    max-height: 250px;
+    padding: 0.5rem;
+  }
+  
+  .comentario-item {
+    padding: 0.5rem;
+  }
+  
+  .comentario-input {
+    min-height: 60px;
+    padding: 0.5rem;
+  }
+  
+  .comentario-actions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+  }
+  
+  .caracteres-restantes {
+    text-align: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .reporte-autor {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+  
+  .autor-badge {
+    align-self: flex-start;
+  }
+  
+  .btn-comentarios {
+    font-size: 0.8rem;
+    padding: 0.4rem;
+  }
+  
+  .comentario-input {
+    font-size: 0.8rem;
+  }
+}
+
+/* Indicador visual para reportes que se pueden comentar */
+.reporte-ajeno .reporte-actions::after {
+  content: "💬 Puedes comentar";
+  position: absolute;
+  top: -2rem;
+  right: 0;
+  background: rgba(63, 90, 245, 0.1);
+  color: #3F5AF5;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  font-size: 0.7rem;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.reporte-ajeno:hover .reporte-actions::after {
+  opacity: 1;
+}
+
+.reporte-actions {
+  position: relative;
+}
+
+/* Estilo para textarea con ngModel */
+textarea.ng-invalid.ng-dirty {
+  border-color: #ef4444;
+}
+
+textarea.ng-valid.ng-dirty {
+  border-color: #10b981;
+}

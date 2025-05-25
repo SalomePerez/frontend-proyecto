@@ -4,13 +4,16 @@ import { Router, ActivatedRoute } from '@angular/router';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 
-// Interface del reporte
-interface Reporte {
-  id: number;
+// ✨ INTEGRACIÓN CON BACKEND
+import { ReporteService, MiReporteDTO } from '../../servicios/reporte.service';
+
+// Interface local para compatibilidad con el template
+interface ReporteLocal {
+  id: string; // ✨ CAMBIAR A STRING
   titulo: string;
   descripcion: string;
   categoria: 'emergencia' | 'seguridad' | 'infraestructura' | 'otros';
-  estado: 'pendiente' | 'en_proceso' | 'resuelto' | 'rechazado';
+  estado: 'pendiente' | 'en_proceso' | 'resuelto' | 'rechazado' | 'eliminado';
   prioridad: 'baja' | 'media' | 'alta' | 'critica';
   fechaCreacion: string;
   fechaActualizacion: string;
@@ -50,132 +53,19 @@ interface Comentario {
 })
 export class DetalleReporteComponent implements OnInit, OnDestroy {
   
-  reporte: Reporte | null = null;
+  reporte: ReporteLocal | null = null;
   isLoading: boolean = true;
-  reporteId: number | null = null;
+  hasError: boolean = false;
+  errorMessage: string = '';
+  reporteId: string | null = null; // ✨ CAMBIAR A STRING
   userName: string = 'Cliente SegurApp';
-  
-  // ✅ DATOS SINCRONIZADOS CON reportes-propios.component.ts
-  private reportesData: Reporte[] = [
-    {
-      id: 1,
-      titulo: 'Robo en mi cuadra',
-      descripcion: 'Vi un robo a mano armada en la calle 45 con carrera 12. Los delincuentes se movilizaban en motocicleta negra, eran dos personas, una conducía y la otra amenazó con un arma de fuego a una señora que caminaba por la acera. Le quitaron el bolso y el celular. Todo ocurrió aproximadamente a las 8:30 PM. La señora gritó pidiendo ayuda pero cuando salimos ya se habían ido. Llamamos inmediatamente a la policía.',
-      categoria: 'seguridad',
-      estado: 'en_proceso',
-      prioridad: 'alta',
-      fechaCreacion: '2024-01-15T10:30:00',
-      fechaActualizacion: '2024-01-16T14:20:00',
-      ubicacion: {
-        direccion: 'Calle 45 # 12-34, Bogotá',
-        lat: 4.6097,
-        lng: -74.0817
-      },
-      imagenes: ['assets/reporte1.jpg'],
-      comentariosAdmin: 'Se ha enviado patrulla al área. Caso bajo investigación.',
-      esPropio: true,
-      detallesAdicionales: {
-        telefono: '300-123-4567',
-        email: 'usuario@email.com',
-        testigos: ['Juan Pérez (Transeúnte)', 'María García (Propietaria de tienda)'],
-        evidencias: ['Fotografía de la escena', 'Video de cámara de seguridad']
-      }
-    },
-    {
-      id: 4,
-      titulo: 'Ruido excesivo del bar',
-      descripcion: 'El bar de mi cuadra tiene música muy alta todas las noches después de las 11 PM, violando las normas de ruido establecidas por la alcaldía. Esto viene sucediendo desde hace aproximadamente 3 semanas. He intentado hablar con el dueño pero no ha dado resultado. La música se extiende hasta altas horas de la madrugada (2-3 AM) afectando el descanso de todos los vecinos, especialmente de los niños y personas mayores del sector.',
-      categoria: 'otros',
-      estado: 'pendiente',
-      prioridad: 'baja',
-      fechaCreacion: '2024-01-16T22:30:00',
-      fechaActualizacion: '2024-01-16T22:30:00',
-      ubicacion: {
-        direccion: 'Calle 85 # 15-20, Bogotá',
-        lat: 4.6097,
-        lng: -74.0817
-      },
-      esPropio: true,
-      detallesAdicionales: {
-        telefono: '300-111-2222',
-        email: 'vecino@email.com',
-        evidencias: ['Audio grabado', 'Fotografía del establecimiento']
-      }
-    },
-    {
-      id: 8,
-      titulo: 'Hueco peligroso en la vía',
-      descripcion: 'Hay un hueco muy grande en la carrera 15 que está causando accidentes de motocicletas y daños a vehículos. El hueco tiene aproximadamente 80 cm de diámetro y 30 cm de profundidad. Se formó después de las lluvias de la semana pasada. Ya he visto al menos 3 motociclistas que han tenido problemas al pasar por ahí, uno de ellos se cayó y se lastimó el brazo. Es urgente que se repare antes de que ocurra un accidente más grave.',
-      categoria: 'infraestructura',
-      estado: 'pendiente',
-      prioridad: 'media',
-      fechaCreacion: '2024-01-17T08:15:00',
-      fechaActualizacion: '2024-01-17T08:15:00',
-      ubicacion: {
-        direccion: 'Carrera 15 # 34-45, Bogotá',
-        lat: 4.6097,
-        lng: -74.0817
-      },
-      esPropio: true,
-      detallesAdicionales: {
-        telefono: '300-987-6543',
-        email: 'usuario3@email.com',
-        evidencias: ['Fotografía del hueco', 'Video del incidente']
-      }
-    },
-    {
-      id: 12,
-      titulo: 'Peligro: Cables eléctricos sueltos',
-      descripcion: 'Cables de alta tensión colgando peligrosamente sobre la calle después de la tormenta de ayer. Los cables están aproximadamente a 3 metros del suelo, lo que representa un grave peligro para peatones y vehículos altos. Se pueden ver chispas ocasionales cuando el viento los mueve. La situación es muy peligrosa y requiere atención inmediata de la empresa de energía.',
-      categoria: 'emergencia',
-      estado: 'resuelto',
-      prioridad: 'critica',
-      fechaCreacion: '2024-01-10T15:45:00',
-      fechaActualizacion: '2024-01-11T09:30:00',
-      ubicacion: {
-        direccion: 'Avenida 68 # 45-12, Bogotá',
-        lat: 4.6097,
-        lng: -74.0817
-      },
-      comentariosAdmin: 'Cuadrilla de la empresa eléctrica reparó los cables. Peligro neutralizado.',
-      esPropio: true,
-      detallesAdicionales: {
-        telefono: '300-555-1234',
-        email: 'usuario4@email.com',
-        testigos: ['Carlos Rodríguez (Vecino)', 'Ana López (Transeúnte)'],
-        evidencias: ['Fotografía de los cables', 'Reporte técnico de la empresa eléctrica']
-      }
-    },
-    {
-      id: 15,
-      titulo: 'Intento de robo a mi vehículo',
-      descripcion: 'Intentaron robar mi carro en el parqueadero del supermercado. Los ladrones huyeron cuando llegué. Encontré la ventana del conductor rota y evidencia de que intentaron forzar la ignición. El incidente ocurrió el sábado en la tarde, aproximadamente a las 4 PM. El centro comercial tiene cámaras de seguridad que podrían haber grabado el incidente. También hay testigos que vieron a dos sujetos sospechosos rondando los vehículos.',
-      categoria: 'seguridad',
-      estado: 'rechazado',
-      prioridad: 'alta',
-      fechaCreacion: '2024-01-09T19:20:00',
-      fechaActualizacion: '2024-01-12T11:15:00',
-      ubicacion: {
-        direccion: 'Centro Comercial Andino, Bogotá',
-        lat: 4.6097,
-        lng: -74.0817
-      },
-      comentariosAdmin: 'No se encontró evidencia suficiente para proceder. Se recomienda instalar cámaras.',
-      esPropio: true,
-      detallesAdicionales: {
-        telefono: '300-777-8888',
-        email: 'usuario5@email.com',
-        testigos: ['Pedro Martínez (Vigilante)', 'Laura Sánchez (Cliente)'],
-        evidencias: ['Fotografía del vehículo dañado', 'Video de cámaras de seguridad']
-      }
-    }
-  ];
 
   private destroy$ = new Subject<void>();
 
   constructor(
     private router: Router,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    private reporteService: ReporteService // ✨ INYECTAR SERVICIO
   ) {
     this.loadUserData();
   }
@@ -184,11 +74,13 @@ export class DetalleReporteComponent implements OnInit, OnDestroy {
     this.route.queryParams
       .pipe(takeUntil(this.destroy$))
       .subscribe(params => {
-        this.reporteId = params['id'] ? parseInt(params['id']) : null;
+        this.reporteId = params['id'] || null;
         if (this.reporteId) {
           this.loadReporteDetalle();
         } else {
-          this.router.navigate(['/reportes-propios']); // ✅ Cambié la navegación de regreso
+          this.hasError = true;
+          this.errorMessage = 'No se especificó un ID de reporte válido';
+          this.isLoading = false;
         }
       });
   }
@@ -212,26 +104,77 @@ export class DetalleReporteComponent implements OnInit, OnDestroy {
     }
   }
 
+  // ✨ MÉTODO ACTUALIZADO PARA USAR BACKEND
   private loadReporteDetalle(): void {
-    this.isLoading = true;
-    
-    // Simular carga desde servidor
-    setTimeout(() => {
-      this.reporte = this.reportesData.find(r => r.id === this.reporteId) || null;
-      
-      if (!this.reporte) {
-        console.error('Reporte no encontrado');
-        this.router.navigate(['/reportes-propios']); // ✅ Cambié la navegación de regreso
-        return;
-      }
-      
+    if (!this.reporteId) {
+      this.hasError = true;
+      this.errorMessage = 'ID de reporte no válido';
       this.isLoading = false;
-    }, 1000);
+      return;
+    }
+
+    this.isLoading = true;
+    this.hasError = false;
+    this.errorMessage = '';
+    
+    console.log('📄 Cargando detalles del reporte:', this.reporteId);
+    
+    this.reporteService.obtenerDetalleReporte(this.reporteId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (miReporte) => {
+          console.log('✅ Detalles del reporte cargados:', miReporte);
+          
+          // Convertir MiReporteDTO a formato local
+          this.reporte = this.convertirMiReporteALocal(miReporte);
+          this.isLoading = false;
+        },
+        error: (error) => {
+          console.error('❌ Error cargando detalles del reporte:', error);
+          this.hasError = true;
+          this.errorMessage = error.message || 'Error al cargar los detalles del reporte';
+          this.isLoading = false;
+          
+          // Si es error de autenticación, redirigir al login
+          if (error.message.includes('sesión ha expirado') || error.message.includes('iniciar sesión')) {
+            setTimeout(() => {
+              this.router.navigate(['/login']);
+            }, 3000);
+          }
+        }
+      });
+  }
+
+  // ✨ CONVERTIR MiReporteDTO A FORMATO LOCAL
+  private convertirMiReporteALocal(miReporte: MiReporteDTO): ReporteLocal {
+    return {
+      id: miReporte.id,
+      titulo: miReporte.titulo,
+      descripcion: miReporte.descripcion,
+      categoria: miReporte.categoria as 'emergencia' | 'seguridad' | 'infraestructura' | 'otros',
+      estado: ['pendiente', 'en_proceso', 'resuelto', 'rechazado', 'eliminado'].includes(miReporte.estado)
+        ? miReporte.estado as 'pendiente' | 'en_proceso' | 'resuelto' | 'rechazado' | 'eliminado'
+        : 'pendiente',
+      prioridad: miReporte.prioridad,
+      fechaCreacion: miReporte.fechaCreacion,
+      fechaActualizacion: miReporte.fechaActualizacion,
+      ubicacion: miReporte.ubicacion,
+      imagenes: miReporte.imagenes,
+      comentariosAdmin: miReporte.comentariosAdmin,
+      esPropio: true, // Siempre true ya que es mi reporte
+      detallesAdicionales: {
+        // Estos campos no vienen del backend directamente, podrías agregarlos si es necesario
+        telefono: undefined,
+        email: undefined,
+        testigos: [],
+        evidencias: []
+      }
+    };
   }
 
   // Métodos de navegación
   goBack(): void {
-    this.router.navigate(['/reportes-propios']); // ✅ Cambié la navegación de regreso
+    this.router.navigate(['/reportes-propios']);
   }
 
   editarReporte(): void {
@@ -239,10 +182,12 @@ export class DetalleReporteComponent implements OnInit, OnDestroy {
       this.router.navigate(['/editar-reporte'], { 
         queryParams: { id: this.reporte.id } 
       });
+    } else {
+      alert('Solo puedes editar reportes que estén en estado pendiente');
     }
   }
 
-  // Métodos de utilidad
+  // Métodos de utilidad (mantener existentes)
   getCategoriaIcon(categoria: string): string {
     switch (categoria) {
       case 'emergencia':
@@ -283,6 +228,8 @@ export class DetalleReporteComponent implements OnInit, OnDestroy {
         return 'estado-resuelto';
       case 'rechazado':
         return 'estado-rechazado';
+      case 'eliminado':
+        return 'estado-eliminado';
       default:
         return 'estado-pendiente';
     }
@@ -298,6 +245,8 @@ export class DetalleReporteComponent implements OnInit, OnDestroy {
         return 'Resuelto';
       case 'rechazado':
         return 'Rechazado';
+      case 'eliminado':
+        return 'Eliminado';
       default:
         return 'Desconocido';
     }
@@ -334,37 +283,47 @@ export class DetalleReporteComponent implements OnInit, OnDestroy {
   }
 
   formatFecha(fecha: string): string {
-    const date = new Date(fecha);
-    return date.toLocaleDateString('es-CO', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  }
-
-  getTiempoTranscurrido(fecha: string): string {
-    const ahora = new Date();
-    const fechaReporte = new Date(fecha);
-    const diferencia = ahora.getTime() - fechaReporte.getTime();
-    
-    const minutos = Math.floor(diferencia / (1000 * 60));
-    const horas = Math.floor(diferencia / (1000 * 60 * 60));
-    const dias = Math.floor(diferencia / (1000 * 60 * 60 * 24));
-    
-    if (dias > 0) {
-      return `Hace ${dias} día${dias > 1 ? 's' : ''}`;
-    } else if (horas > 0) {
-      return `Hace ${horas} hora${horas > 1 ? 's' : ''}`;
-    } else if (minutos > 0) {
-      return `Hace ${minutos} minuto${minutos > 1 ? 's' : ''}`;
-    } else {
-      return 'Hace un momento';
+    try {
+      const date = new Date(fecha);
+      return date.toLocaleDateString('es-CO', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (error) {
+      console.error('Error formateando fecha:', error);
+      return 'Fecha no disponible';
     }
   }
 
-  verDetalleReporte(reporteId: number): void {
+  getTiempoTranscurrido(fecha: string): string {
+    try {
+      const ahora = new Date();
+      const fechaReporte = new Date(fecha);
+      const diferencia = ahora.getTime() - fechaReporte.getTime();
+      
+      const minutos = Math.floor(diferencia / (1000 * 60));
+      const horas = Math.floor(diferencia / (1000 * 60 * 60));
+      const dias = Math.floor(diferencia / (1000 * 60 * 60 * 24));
+      
+      if (dias > 0) {
+        return `Hace ${dias} día${dias > 1 ? 's' : ''}`;
+      } else if (horas > 0) {
+        return `Hace ${horas} hora${horas > 1 ? 's' : ''}`;
+      } else if (minutos > 0) {
+        return `Hace ${minutos} minuto${minutos > 1 ? 's' : ''}`;
+      } else {
+        return 'Hace un momento';
+      }
+    } catch (error) {
+      console.error('Error calculando tiempo transcurrido:', error);
+      return 'Tiempo no disponible';
+    }
+  }
+
+  verDetalleReporte(reporteId: string): void {
     this.router.navigate(['/detalle-reporte'], { queryParams: { id: reporteId } });
   }
 
@@ -378,6 +337,7 @@ export class DetalleReporteComponent implements OnInit, OnDestroy {
 
   // Método para descargar reporte como PDF (simulado)
   descargarReporte(): void {
+    console.log('📄 Descargando reporte:', this.reporteId);
     alert('Funcionalidad de descarga en desarrollo. El reporte se descargará como PDF.');
   }
 
@@ -389,4 +349,9 @@ export class DetalleReporteComponent implements OnInit, OnDestroy {
   hasEvidencias(): boolean {
     return !!(this.reporte?.detallesAdicionales?.evidencias && this.reporte.detallesAdicionales.evidencias.length > 0);
   }
+
+  verImagenCompleta(imagen: string): void {
+  // Por ejemplo, abrir la imagen en una nueva pestaña
+  window.open(imagen, '_blank');
+}
 }
