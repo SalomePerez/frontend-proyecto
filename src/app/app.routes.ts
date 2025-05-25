@@ -1,5 +1,4 @@
 import { Routes } from '@angular/router';
-import { AuthGuard } from './guards/auth.guard';
 
 // ===== PÁGINAS DE AUTENTICACIÓN Y REGISTRO =====
 import { InicioSesionComponent } from './paginas/inicio-sesion/inicio-sesion.component';
@@ -14,6 +13,7 @@ import { CambiarContraseniaComponent } from './paginas/cambiar-contrasenia/cambi
 // ===== DASHBOARDS Y VISTAS PRINCIPALES =====
 import { HomeComponent } from './paginas/home/home.component';
 import { PrincipalClienteComponent } from './paginas/principal-cliente/principal-cliente.component';
+import { PrincipalAdministradorComponent } from './paginas/principal-administrador/principal-administrador.component';
 
 // ===== GESTIÓN DE REPORTES =====
 import { CrearReporteComponent } from './paginas/crear-reporte/crear-reporte.component';
@@ -21,82 +21,38 @@ import { DetalleReporteComponent } from './paginas/detalle-reporte/detalle-repor
 import { MisReportesComponent } from './paginas/mis-reportes/mis-reportes.component';
 import { ReportesPropiosComponent } from './paginas/reportes-propios/reportes-propios.component';
 import { EditarReporteComponent } from './paginas/editar-reporte/editar-reporte.component';
-import { DetalleReporteSubidosComponent } from './paginas/detalles-reportes-subidos/detalles-reportes-subidos.component';
-
 
 export const routes: Routes = [
   
   // ===== RUTA RAÍZ =====
   { path: '', redirectTo: '/home', pathMatch: 'full' },
 
-  // ===== RUTAS PÚBLICAS (SIN PROTECCIÓN) =====
+  // ===== RUTAS PÚBLICAS =====
   { path: 'home', component: HomeComponent },
+  
+  // ===== AUTENTICACIÓN =====
   { path: 'login', component: InicioSesionComponent },
+  { path: 'inicio-sesion', component: InicioSesionComponent },
   { path: 'registro', component: RegistroComponent },
   { path: 'registro-exitoso', component: RegistroExitosoComponent },
   { path: 'activar-cuenta', component: ActivarCuentaComponent },
-  
-  // ===== RECUPERACIÓN DE CONTRASEÑA =====
   { path: 'recuperar-contrasenia', component: RecuperarContraseniaComponent },
   { path: 'modificar-contrasenia', component: ModificarContraseniaComponent },
   { path: 'modificar-contrasenia-exitoso', component: ModificarContraseniaExitosoComponent },
   { path: 'cambiar-contrasenia', component: CambiarContraseniaComponent },
 
-  // ===== DASHBOARDS - PROTEGIDOS POR ROL =====
-  { 
-    path: 'principal-cliente', 
-    component: PrincipalClienteComponent,
-    canActivate: [AuthGuard],
-    data: { role: 'CLIENTE' }
-  },
-  { 
-    path: 'dashboard', 
-    component: PrincipalClienteComponent,
-    canActivate: [AuthGuard],
-    data: { role: 'CLIENTE' }
-  },
-
-  // ===== GESTIÓN DE REPORTES - PROTEGIDAS =====
-  { 
-    path: 'crear-reporte', 
-    component: CrearReporteComponent,
-    canActivate: [AuthGuard],
-    data: { role: 'CLIENTE' }
-  },
-  { 
-    path: 'detalle-reporte', 
-    component: DetalleReporteComponent,
-    canActivate: [AuthGuard],
-    data: { role: 'CLIENTE' }
-  },
-  { 
-    path: 'mis-reportes', 
-    component: MisReportesComponent,
-    canActivate: [AuthGuard],
-    data: { role: 'CLIENTE' }
-  },
-
-  {
-  path: 'editar-reporte',
-  component: EditarReporteComponent,
-  canActivate: [AuthGuard],
-  data: { role: 'CLIENTE' }
-},
-
-  {
-  path: 'detalle-reporte-subidos',
-  component: DetalleReporteSubidosComponent
-},
-
-  { 
-    path: 'reportes-propios', 
-    component: ReportesPropiosComponent,
-    canActivate: [AuthGuard],
-    data: { role: 'CLIENTE' }
-  },
-
-
-
+  // ===== DASHBOARDS =====
+  { path: 'principal-cliente', component: PrincipalClienteComponent },
+  { path: 'dashboard', component: PrincipalClienteComponent },
+  { path: 'admin', component: PrincipalAdministradorComponent },
+  
+  // ===== GESTIÓN DE REPORTES =====
+  { path: 'crear-reporte', component: CrearReporteComponent },
+  { path: 'mis-reportes', component: MisReportesComponent },
+  { path: 'detalle-reporte', component: DetalleReporteComponent },
+  { path: 'editar-reporte', component: EditarReporteComponent },
+  { path: 'reportes-propios', component: ReportesPropiosComponent },
+  
   // ===== RUTA WILDCARD (DEBE IR AL FINAL) =====
   { path: '**', redirectTo: '/home' }
 ];
