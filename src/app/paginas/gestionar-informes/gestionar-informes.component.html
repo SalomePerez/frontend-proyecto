@@ -1,0 +1,501 @@
+<div class="gestionar-informes-container">
+  <!-- Header -->
+  <header class="page-header">
+    <div class="header-content">
+      <div class="header-left">
+        <button class="back-btn" (click)="volverAlDashboard()">
+          <i class="bi bi-arrow-left"></i>
+        </button>
+        <div class="header-info">
+          <h1 class="page-title">
+            <i class="bi bi-file-earmark-bar-graph"></i>
+            Gestionar Informes
+          </h1>
+          <p class="page-subtitle">Crear y administrar informes de reportes ciudadanos</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button class="new-report-btn" (click)="nuevoInforme()" *ngIf="vistaActual === 'lista'">
+          <i class="bi bi-plus-circle"></i>
+          Nuevo Informe
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Navegación de vistas -->
+  <nav class="view-navigation" *ngIf="vistaActual !== 'lista'">
+    <div class="nav-breadcrumb">
+      <button class="breadcrumb-item" (click)="cambiarVista('lista')">
+        <i class="bi bi-house"></i>
+        Informes
+      </button>
+      <i class="bi bi-chevron-right separator"></i>
+      <span class="breadcrumb-item active" *ngIf="vistaActual === 'crear'">
+        <i class="bi bi-plus"></i>
+        Crear Informe
+      </span>
+      <span class="breadcrumb-item active" *ngIf="vistaActual === 'preview'">
+        <i class="bi bi-eye"></i>
+        Vista Previa
+      </span>
+    </div>
+  </nav>
+
+  <!-- Contenido principal -->
+  <main class="main-content">
+    
+    <!-- Estado de carga -->
+    <div class="loading-container" *ngIf="isLoading">
+      <div class="loading-content">
+        <div class="spinner"></div>
+        <p>Cargando datos para informes...</p>
+      </div>
+    </div>
+
+    <!-- Error -->
+    <div class="error-container" *ngIf="error && !isLoading">
+      <div class="error-content">
+        <i class="bi bi-exclamation-triangle"></i>
+        <h3>Error al cargar datos</h3>
+        <p>{{ error }}</p>
+        <button class="retry-btn" (click)="cargarDatos()">
+          <i class="bi bi-arrow-clockwise"></i>
+          Reintentar
+        </button>
+      </div>
+    </div>
+
+    <!-- VISTA: Lista de informes -->
+    <div class="lista-informes" *ngIf="vistaActual === 'lista' && !isLoading && !error">
+      
+      <!-- Sin informes -->
+      <div class="no-informes" *ngIf="informesGuardados.length === 0">
+        <div class="no-informes-content">
+          <i class="bi bi-file-earmark-plus"></i>
+          <h3>No hay informes creados</h3>
+          <p>Comienza creando tu primer informe de reportes ciudadanos</p>
+          <button class="create-first-btn" (click)="nuevoInforme()">
+            <i class="bi bi-plus-circle"></i>
+            Crear Primer Informe
+          </button>
+        </div>
+      </div>
+
+      <!-- Lista de informes existentes -->
+      <div class="informes-grid" *ngIf="informesGuardados.length > 0">
+        <div class="informe-card" *ngFor="let informe of informesGuardados">
+          <div class="card-header">
+            <div class="card-title">{{ informe.titulo }}</div>
+            <div class="card-estado">
+              <span class="estado-badge" [class]="getEstadoInformeClass(informe.estado)">
+                {{ getEstadoInformeEtiqueta(informe.estado) }}
+              </span>
+            </div>
+          </div>
+          
+          <div class="card-content">
+            <div class="card-info">
+              <div class="info-item">
+                <i class="bi bi-person"></i>
+                <span>{{ informe.autor }}</span>
+              </div>
+              <div class="info-item">
+                <i class="bi bi-calendar"></i>
+                <span>{{ formatearFecha(informe.fechaCreacion) }}</span>
+              </div>
+              <div class="info-item">
+                <i class="bi bi-bar-chart"></i>
+                <span>{{ informe.totalReportes }} reportes</span>
+              </div>
+            </div>
+          </div>
+          
+          <div class="card-actions">
+            <button class="action-btn view-btn" title="Ver informe">
+              <i class="bi bi-eye"></i>
+            </button>
+            <button class="action-btn download-btn" title="Descargar PDF">
+              <i class="bi bi-download"></i>
+            </button>
+            <button class="action-btn edit-btn" title="Editar" *ngIf="informe.estado === 'BORRADOR'">
+              <i class="bi bi-pencil"></i>
+            </button>
+            <button class="action-btn delete-btn" (click)="eliminarInforme(informe.id)" title="Eliminar">
+              <i class="bi bi-trash"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- VISTA: Crear informe -->
+    <div class="crear-informe" *ngIf="vistaActual === 'crear' && !isLoading && !error">
+      <div class="crear-content">
+        
+        <!-- Configuración básica -->
+        <section class="config-section">
+          <h3 class="section-title">
+            <i class="bi bi-gear"></i>
+            Configuración Básica
+          </h3>
+          
+          <div class="config-grid">
+            <div class="config-group">
+              <label class="config-label">Título del Informe *</label>
+              <input 
+                type="text" 
+                class="config-input" 
+                placeholder="Ej: Informe Mensual de Seguridad"
+                [(ngModel)]="configInforme.titulo">
+            </div>
+            
+            <div class="config-group">
+              <label class="config-label">Tipo de Informe</label>
+              <select class="config-select" [(ngModel)]="configInforme.filtros.tipoInforme">
+                <option *ngFor="let tipo of tiposInforme" [value]="tipo.valor">
+                  {{ tipo.etiqueta }}
+                </option>
+              </select>
+            </div>
+            
+            <div class="config-group full-width">
+              <label class="config-label">Descripción *</label>
+              <textarea 
+                class="config-textarea" 
+                placeholder="Describe el propósito y alcance de este informe..."
+                [(ngModel)]="configInforme.descripcion"
+                rows="3"></textarea>
+            </div>
+          </div>
+        </section>
+
+        <!-- Filtros de datos -->
+        <section class="filters-section">
+          <h3 class="section-title">
+            <i class="bi bi-funnel"></i>
+            Filtros de Datos
+          </h3>
+          
+          <div class="filters-grid">
+            <div class="filter-group">
+              <label class="filter-label">Categoría</label>
+              <select class="filter-select" [(ngModel)]="configInforme.filtros.categoria" (change)="aplicarFiltros()">
+                <option *ngFor="let categoria of categoriasDisponibles" [value]="categoria.valor">
+                  {{ categoria.etiqueta }}
+                </option>
+              </select>
+            </div>
+            
+            <div class="filter-group">
+              <label class="filter-label">Estado</label>
+              <select class="filter-select" [(ngModel)]="configInforme.filtros.estado" (change)="aplicarFiltros()">
+                <option *ngFor="let estado of estadosDisponibles" [value]="estado.valor">
+                  {{ estado.etiqueta }}
+                </option>
+              </select>
+            </div>
+            
+            <div class="filter-group">
+              <label class="filter-label">Ciudad</label>
+              <select class="filter-select" [(ngModel)]="configInforme.filtros.ciudad" (change)="aplicarFiltros()">
+                <option *ngFor="let ciudad of ciudadesDisponibles" [value]="ciudad.valor">
+                  {{ ciudad.etiqueta }}
+                </option>
+              </select>
+            </div>
+            
+            <div class="filter-group">
+              <label class="filter-label">Fecha Desde</label>
+              <input 
+                type="date" 
+                class="filter-input" 
+                [(ngModel)]="configInforme.filtros.fechaDesde"
+                (change)="aplicarFiltros()">
+            </div>
+            
+            <div class="filter-group">
+              <label class="filter-label">Fecha Hasta</label>
+              <input 
+                type="date" 
+                class="filter-input" 
+                [(ngModel)]="configInforme.filtros.fechaHasta"
+                (change)="aplicarFiltros()">
+            </div>
+          </div>
+          
+          <!-- Opciones adicionales -->
+          <div class="additional-options">
+            <h4 class="options-title">Incluir en el informe:</h4>
+            <div class="checkbox-group">
+              <label class="checkbox-item">
+                <input type="checkbox" [(ngModel)]="configInforme.filtros.incluirGraficos">
+                <span class="checkmark"></span>
+                <span class="checkbox-label">Gráficos estadísticos</span>
+              </label>
+              <label class="checkbox-item">
+                <input type="checkbox" [(ngModel)]="configInforme.filtros.incluirMapas">
+                <span class="checkmark"></span>
+                <span class="checkbox-label">Mapas de ubicación</span>
+              </label>
+              <label class="checkbox-item">
+                <input type="checkbox" [(ngModel)]="configInforme.filtros.incluirEstadisticas">
+                <span class="checkmark"></span>
+                <span class="checkbox-label">Tablas estadísticas</span>
+              </label>
+            </div>
+          </div>
+        </section>
+
+        <!-- Resumen de datos -->
+        <section class="summary-section">
+          <h3 class="section-title">
+            <i class="bi bi-bar-chart"></i>
+            Resumen de Datos
+          </h3>
+          
+          <div class="summary-stats">
+            <div class="stat-card">
+              <div class="stat-number">{{ configInforme.estadisticas.totalReportes }}</div>
+              <div class="stat-label">Total Reportes</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number">{{ configInforme.estadisticas.promedioResolucion }}</div>
+              <div class="stat-label">Días Promedio</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number">{{ Object.keys(configInforme.estadisticas.reportesPorCiudad).length }}</div>
+              <div class="stat-label">Ciudades</div>
+            </div>
+          </div>
+          
+          <!-- Distribución por estado -->
+          <div class="distribution-chart" *ngIf="configInforme.estadisticas.totalReportes > 0">
+            <h4 class="chart-title">Distribución por Estado</h4>
+            <div class="chart-bars">
+              <div class="chart-bar" *ngFor="let estado of Object.keys(configInforme.estadisticas.reportesPorEstado)">
+                <div class="bar-label">{{ estado }}</div>
+                <div class="bar-container">
+                  <div class="bar-fill" 
+                       [class]="getEstadoClass(estado)"
+                       [style.width.%]="getPorcentaje(configInforme.estadisticas.reportesPorEstado[estado], configInforme.estadisticas.totalReportes)">
+                  </div>
+                  <span class="bar-value">{{ configInforme.estadisticas.reportesPorEstado[estado] }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Acciones -->
+        <section class="actions-section">
+          <div class="actions-buttons">
+            <button class="action-btn secondary-btn" (click)="cambiarVista('lista')">
+              <i class="bi bi-x-circle"></i>
+              Cancelar
+            </button>
+            <button class="action-btn save-btn" (click)="guardarBorrador()">
+              <i class="bi bi-save"></i>
+              Guardar Borrador
+            </button>
+            <button class="action-btn preview-btn" (click)="generarPreview()">
+              <i class="bi bi-eye"></i>
+              Vista Previa
+            </button>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <!-- VISTA: Preview del informe -->
+    <div class="preview-informe" *ngIf="vistaActual === 'preview' && !isLoading && !error">
+      <div class="preview-content">
+        
+        <!-- Header del preview -->
+        <div class="preview-header">
+          <div class="preview-actions">
+            <button class="action-btn secondary-btn" (click)="cambiarVista('crear')">
+              <i class="bi bi-arrow-left"></i>
+              Volver a Editar
+            </button>
+            <button class="action-btn save-btn" (click)="guardarBorrador()">
+              <i class="bi bi-save"></i>
+              Guardar Borrador
+            </button>
+            <button 
+              class="action-btn pdf-btn" 
+              (click)="generarPDF()" 
+              [disabled]="isGeneratingReport"
+              [class.loading]="isGeneratingReport">
+              <span *ngIf="!isGeneratingReport">
+                <i class="bi bi-file-pdf"></i>
+                Generar PDF
+              </span>
+              <span *ngIf="isGeneratingReport">
+                <i class="bi bi-arrow-clockwise spinning"></i>
+                Generando PDF...
+              </span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Contenido del informe -->
+        <div class="informe-document">
+          
+          <!-- Portada -->
+          <section class="document-header">
+            <h1 class="document-title">{{ configInforme.titulo }}</h1>
+            <div class="document-meta">
+              <p class="document-description">{{ configInforme.descripcion }}</p>
+              <div class="meta-info">
+                <div class="meta-item">
+                  <strong>Autor:</strong> {{ configInforme.autor }}
+                </div>
+                <div class="meta-item">
+                  <strong>Fecha:</strong> {{ formatearFecha(configInforme.fechaCreacion) }}
+                </div>
+                <div class="meta-item">
+                  <strong>Tipo:</strong> {{ configInforme.filtros.tipoInforme }}
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Resumen ejecutivo -->
+          <section class="document-section">
+            <h2 class="section-heading">Resumen Ejecutivo</h2>
+            <div class="executive-summary">
+              <p>
+                Este informe analiza un total de <strong>{{ configInforme.estadisticas.totalReportes }} reportes</strong> 
+                ciudadanos registrados en el período comprendido entre 
+                {{ formatearFecha(configInforme.filtros.fechaDesde + 'T00:00:00') }} y 
+                {{ formatearFecha(configInforme.filtros.fechaHasta + 'T23:59:59') }}.
+              </p>
+              <p>
+                El tiempo promedio de resolución es de <strong>{{ configInforme.estadisticas.promedioResolucion }} días</strong>, 
+                con una distribución que abarca múltiples categorías de incidentes ciudadanos.
+              </p>
+            </div>
+          </section>
+
+          <!-- Estadísticas generales -->
+          <section class="document-section" *ngIf="configInforme.filtros.incluirEstadisticas">
+            <h2 class="section-heading">Estadísticas Generales</h2>
+            
+            <div class="stats-tables">
+              <!-- Tabla por estado -->
+              <div class="stats-table">
+                <h3 class="table-title">Distribución por Estado</h3>
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Estado</th>
+                      <th>Cantidad</th>
+                      <th>Porcentaje</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let estado of Object.keys(configInforme.estadisticas.reportesPorEstado)">
+                      <td>
+                        <span class="estado-badge" [class]="getEstadoClass(estado)">
+                          {{ estado }}
+                        </span>
+                      </td>
+                      <td>{{ configInforme.estadisticas.reportesPorEstado[estado] }}</td>
+                      <td>{{ getPorcentaje(configInforme.estadisticas.reportesPorEstado[estado], configInforme.estadisticas.totalReportes) }}%</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- Tabla por categoría -->
+              <div class="stats-table">
+                <h3 class="table-title">Distribución por Categoría</h3>
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Categoría</th>
+                      <th>Cantidad</th>
+                      <th>Porcentaje</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let categoria of Object.keys(configInforme.estadisticas.reportesPorCategoria)">
+                      <td>{{ categoria }}</td>
+                      <td>{{ configInforme.estadisticas.reportesPorCategoria[categoria] }}</td>
+                      <td>{{ getPorcentaje(configInforme.estadisticas.reportesPorCategoria[categoria], configInforme.estadisticas.totalReportes) }}%</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
+          <!-- Reportes más importantes -->
+          <section class="document-section">
+            <h2 class="section-heading">Reportes de Mayor Impacto</h2>
+            <div class="top-reports">
+              <div class="report-item" *ngFor="let reporte of configInforme.estadisticas.reportesMasImportantes; let i = index">
+                <div class="report-rank">{{ i + 1 }}</div>
+                <div class="report-content">
+                  <h4 class="report-title">{{ reporte.titulo }}</h4>
+                  <p class="report-description">{{ reporte.descripcion }}</p>
+                  <div class="report-meta">
+                    <span class="meta-badge" [class]="getEstadoClass(reporte.estadoActual)">
+                      {{ reporte.estadoActual }}
+                    </span>
+                    <span class="meta-importance">
+                      <i class="bi bi-star-fill"></i>
+                      {{ reporte.contadorImportante }}
+                    </span>
+                    <span class="meta-date">{{ formatearFecha(reporte.fecha) }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Detalle de reportes -->
+          <section class="document-section">
+            <h2 class="section-heading">Detalle de Reportes</h2>
+            <div class="reports-detail">
+              <div class="detail-report" *ngFor="let reporte of configInforme.reportesIncluidos.slice(0, 10)">
+                <div class="detail-header">
+                  <h4 class="detail-title">{{ reporte.titulo }}</h4>
+                  <span class="detail-estado" [class]="getEstadoClass(reporte.estadoActual)">
+                    {{ reporte.estadoActual }}
+                  </span>
+                </div>
+                <p class="detail-description">{{ reporte.descripcion }}</p>
+                <div class="detail-info">
+                  <div class="info-col">
+                    <strong>Fecha:</strong> {{ formatearFecha(reporte.fecha) }}
+                  </div>
+                  <div class="info-col">
+                    <strong>Ciudad:</strong> {{ reporte.ciudad }}
+                  </div>
+                  <div class="info-col">
+                    <strong>Importancia:</strong> {{ reporte.contadorImportante }}
+                  </div>
+                </div>
+              </div>
+              
+              <div class="more-reports" *ngIf="configInforme.reportesIncluidos.length > 10">
+                <p><em>... y {{ configInforme.reportesIncluidos.length - 10 }} reportes adicionales</em></p>
+              </div>
+            </div>
+          </section>
+
+          <!-- Footer del documento -->
+          <section class="document-footer">
+            <div class="footer-content">
+              <p><strong>Informe generado por SegurApp</strong></p>
+              <p>Sistema de Gestión de Reportes Ciudadanos</p>
+              <p><em>Fecha de generación: {{ formatearFecha(getCurrentDate()) }}</em></p>
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
